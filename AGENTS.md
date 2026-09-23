@@ -13,17 +13,16 @@ SecurityCheck Portal is an internal tool that scans dependencies of customer-dep
 ## Project Structure
 
 - `Program.cs`, `securitycheck-portal.csproj`, `appsettings*.json`, `Properties/launchSettings.json` — the API (still the `weatherforecast` template; replace, do not extend it). Root namespace: `securitycheck_portal`.
-- `web/app/` — UI. Register every route in `web/app/routes.ts`; route modules live in `web/app/routes/` and import generated types from `./+types/<route>`. Import app code via the `~/` alias (maps to `web/app/`).
+- `web/app/` — UI. Register every route in `web/app/routes.ts`; route modules live in `web/app/routes/`.
 - `context/foundation/` — PRD, tech-stack decision, shape notes. Read @context/foundation/prd.md before implementing a feature (FR-001…FR-008).
 - `web/.agents/skills/react-router/` — React Router reference skill; consult it instead of guessing v8 APIs.
 
 ## Build and Development Commands
 
 - `dotnet run --launch-profile http` — API on `http://localhost:5143` (https profile adds `:7009`). Smoke-test with @securitycheck-portal.http.
-- `dotnet build` — compile the API (nullable reference types are enabled).
-- `cd web && npm run dev` — UI dev server with HMR.
+- `dotnet build` — compile the API.
 - `cd web && npm run typecheck` — runs `react-router typegen && tsc`; run after adding or renaming routes.
-- `cd web && npm run build` — production SSR build.
+- Other UI scripts: see @web/package.json (run from `web/`).
 
 ## Testing
 
@@ -31,4 +30,4 @@ No test project or UI test runner exists yet. When adding the first tests, creat
 
 ## Commits and Pull Requests
 
-History uses short, free-form subjects in Polish or English without prefixes (e.g. `Tech stack`). Default branch is `main`; CI is planned on GitHub Actions with auto-deploy on merge, so keep `main` buildable.
+History uses short, free-form subjects in Polish or English without prefixes (e.g. `Tech stack`). Default branch is `main`; CI is planned on GitHub Actions with auto-deploy on merge, so before merging to `main`, `dotnet build` and `cd web && npm run typecheck` must both exit 0.
