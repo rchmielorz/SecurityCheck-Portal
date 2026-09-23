@@ -13,15 +13,15 @@ SecurityCheck Portal is an internal tool that scans dependencies of customer-dep
 ## Project Structure
 
 - `Program.cs`, `securitycheck-portal.csproj`, `appsettings*.json`, `Properties/launchSettings.json` — the API (still the `weatherforecast` template; replace, do not extend it). Root namespace: `securitycheck_portal`.
-- `web/app/` — UI. Register every route in `web/app/routes.ts`; route modules live in `web/app/routes/`.
+- `web/app/` — UI. Register every route in `web/app/routes.ts`.
 - `context/foundation/` — PRD, tech-stack decision, shape notes. Read @context/foundation/prd.md before implementing a feature (FR-001…FR-008).
-- `web/.agents/skills/react-router/` — React Router reference skill; consult it instead of guessing v8 APIs.
+- `web/.agents/skills/react-router/` — React Router reference skill. Before using a React Router API that isn't already used in `web/app/`, read @web/.agents/skills/react-router/references/framework-mode.md.
 
 ## Build and Development Commands
 
 - `dotnet run --launch-profile http` — API on `http://localhost:5143` (https profile adds `:7009`). Smoke-test with @securitycheck-portal.http.
 - `dotnet build` — compile the API.
-- `cd web && npm run typecheck` — runs `react-router typegen && tsc`; run after adding or renaming routes.
+- `cd web && npm run typecheck` — run after adding or renaming routes.
 - Other UI scripts: see @web/package.json (run from `web/`).
 
 ## Testing
