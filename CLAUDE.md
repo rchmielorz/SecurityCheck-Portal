@@ -1,4 +1,5 @@
 <!-- BEGIN @przeprogramowani/10x-cli -->
+@AGENTS.MD
 
 ## 10xDevs AI Toolkit - Module 2, Lesson 1
 
