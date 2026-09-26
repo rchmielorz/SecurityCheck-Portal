@@ -184,7 +184,7 @@ Fundamenty poniżej zakładają ten stan i nie tworzą ponownie tego, co istniej
 
 1. **Czy i kiedy dodać zbiorczy dashboard wielu klientów?** — Owner: użytkownik/zespół. Block: roadmap-wide (poza M-1; nie blokuje zgłoszenia).
 2. **Czy cykliczne skanowanie (FR-005) zmieści się w MVP zgłaszanym na pierwszy termin?** — Owner: użytkownik. By: 2026-11-04. Block: S-05 (nie blokuje planowania).
-3. **Aktualizacja `infrastructure.md` pod skaner Trivy** — dokument zakłada `dotnet package list --vulnerable` + `npm audit`; rejestr ryzyk (źródło bazy podatności, parsowanie wyniku, pliki blokady) trzeba przepisać pod wybrany skaner. — Owner: user. Block: S-02, F-02 (nie blokuje planowania).
+3. ~~**Aktualizacja `infrastructure.md` pod skaner Trivy**~~ — rozwiązane 2026-09-26: `infrastructure.md` opisuje Trivy (sekcja „Scanner: Trivy”, rejestr ryzyk, kroki instalacji). Otwarte zostają per-slice Unknowns w S-02 (pliki blokady, źródło bazy podatności).
 
 ## Parked
 

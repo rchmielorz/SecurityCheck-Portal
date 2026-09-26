@@ -1,7 +1,9 @@
 ---
 project: securitycheck-portal
 researched_at: 2026-09-23
+updated: 2026-09-26
 recommended_platform: On-prem IIS (Windows Server) + Windows Service worker
+scanner: Trivy (`trivy fs`, JSON output) on a clone checked out at the resolved version
 runner_up: Docker Compose on internal Linux VM
 context_type: mvp
 tech_stack:
@@ -25,6 +27,24 @@ Interview answers (2026-09-23):
 - Co-location: external providers fine.
 - Hosting policy: company infra only.
 - Git hosting: internal network.
+
+## Scanner: Trivy
+
+Decision (2026-09-26, user): the scan engine is **Trivy**. It replaces the earlier assumption of `dotnet package list --vulnerable` + `npm audit`. The worker clones the repo, checks out the exact commit the version pattern resolved to, runs `trivy fs --scanners vuln --format json <dir>`, and records that commit with the result. It does not use `trivy repo`, so the portal owns the checkout and can show which commit was scanned.
+
+Facts that shape the infrastructure (checked 2026-09-26):
+
+- **Trivy finds dependencies only from lock or manifest files.**
+  - .NET: it reads `packages.lock.json`, `packages.config`, `*.deps.json` and `*Packages.props`. It does not read a plain `.csproj`. `*Packages.props` has no transitive dependencies.
+  - Node: it reads `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml` and `bun.lock`. `package.json` alone is not enough.
+  - Development dependencies are excluded by default; `--include-dev-deps` includes them.
+  - Consequence: a repo without lock files scans as "0 packages, 0 vulnerabilities". That is the most likely source of false reassurance.
+- **The vulnerability DB is downloaded, not bundled.** It is an OCI artifact pulled from `mirror.gcr.io` or `ghcr.io` over HTTPS and cached in `--cache-dir`. `--db-repository` points Trivy at a self-hosted mirror, and `--skip-db-update` scans with whatever DB is cached.
+  - Only DB metadata comes in; no source code leaves the company. This is compatible with the "company infra only" filter.
+- **Trivy itself was a supply-chain target.** On 2026-03-19 attackers published a malicious binary v0.69.4 for all platforms, including Windows, and hijacked the `trivy-action` and `setup-trivy` tags. They followed with malicious Docker Hub images v0.69.5 and v0.69.6 (CVE-2026-33634, GHSA-69fq-xp46-6x23).
+  - Install a pinned version, verify it with cosign against the sigstore bundle, and never use a mutable tag.
+
+Sources: [Trivy .NET coverage](https://trivy.dev/latest/docs/coverage/language/dotnet/), [Trivy Node.js coverage](https://trivy.dev/latest/docs/coverage/language/nodejs/), [Trivy air-gap / DB](https://trivy.dev/latest/docs/advanced/air-gap/), [GHSA-69fq-xp46-6x23](https://github.com/aquasecurity/trivy/security/advisories/GHSA-69fq-xp46-6x23).
 
 ## Platform Comparison
 
@@ -79,7 +99,7 @@ It costs nothing extra on the existing server, and it matches how the team alrea
 
 #### 2. Docker Compose on internal Linux VM
 
-It has the most deterministic deploy and rollback of the three, keeps React Router SSR as scaffolded (the web Dockerfile already exists), and gives the same setup in development and production. The gap vs. IIS is a new Linux server the team must patch and back up. The scanner image must be `mcr.microsoft.com/dotnet/sdk:10.0` plus git and Node, not chiseled. Docker group access is root-equivalent.
+It has the most deterministic deploy and rollback of the three, keeps React Router SSR as scaffolded (the web Dockerfile already exists), and gives the same setup in development and production. The gap vs. IIS is a new Linux server the team must patch and back up. The scanner image needs git plus a Trivy binary pinned by version and verified with cosign (or the official image pinned by digest). It does not need the .NET SDK or Node, because Trivy reads lock files directly. Docker group access is root-equivalent.
 
 #### 3. Kamal on internal Linux VM
 
@@ -89,15 +109,17 @@ It has the best agent-driven deploy semantics: one command to deploy and one to 
 
 ### Devil's Advocate — Weaknesses
 
-1. **Scanners depend on external services.** `dotnet package list --vulnerable` reads advisories from nuget.org (and any internal feeds), and `npm audit` calls registry.npmjs.org. If the server's outbound access is blocked or proxied, the tools can produce empty output. The portal could then show "no vulnerabilities" for a scan that actually failed, which breaks the primary guardrail against false reassurance.
+1. **The scanner depends on an external DB.** Trivy pulls its vulnerability DB from `mirror.gcr.io` / `ghcr.io`. If the server's outbound access is blocked or proxied, a first run fails outright. Later runs silently fall back to whatever DB is cached, which may be weeks old. Either way the portal could show "no vulnerabilities" that are not true, which breaks the primary guardrail against false reassurance.
 2. **Two deployables share one schema.** The API runs in IIS and the worker is a Windows Service, both on one PostgreSQL schema. A partial deploy leaves them on different EF Core model versions, and migrations don't roll back automatically.
 3. **The UI must change rendering mode.** The React Router scaffold is `ssr: true`. On IIS it becomes an SPA (`ssr: false`): only the root route may have a `loader`, and there are no `action`/`headers` exports. All data goes through the API over same-origin fetch.
 4. **Shared server blast radius.** A GitHub Actions self-hosted runner with IIS admin rights on a server hosting other internal apps can recycle or break those apps during a deploy.
 5. **PostgreSQL on Windows is unfamiliar.** If the company normally runs SQL Server, installing, patching and backing up Postgres (`pg_dump` schedule, restore test) is new, unowned work.
+6. **Trivy is blind without lock files.** An old customer version with only `.csproj` files (no `packages.lock.json`) or only `package.json` produces zero packages. Trivy reports it as a clean result, not as an error.
+7. **The scanner runs with the worker's privileges.** It runs as the service account, which holds the git credential. A compromised Trivy release, as in March 2026, would leak that credential and read every cloned repo.
 
 ### Pre-Mortem — How This Could Fail
 
-The team shipped the portal on the shared IIS server and left the scanner inside the app pool "for the first release". IIS recycled the pool nightly and on idle, killing in-flight scans after 90 seconds. Those scans were persisted as completed with zero findings, and nobody questioned the green screen for weeks. The fix moved scanning to a Windows Service, but it ran under a virtual account with no user profile. Git could not find credentials, `%TEMP%` pointed at `C:\Windows\Temp`, and clones failed intermittently in ways that looked like network problems. Windows Defender real-time scanning inspected every file of every clone, and scans went from four minutes to twenty-five. Then a proxy change silently blocked nuget.org. The .NET audit returned no advisory data, the parser treated it as "clean", and a critical CVE at a customer went unreported for two months. Finally, a deploy from the admin-rights runner restarted IIS and took down two unrelated internal apps. The platform was fine. The failures came from assuming IIS familiarity covered long-running processes, service identities, and the scanners' external dependencies.
+The team shipped the portal on the shared IIS server and left the scanner inside the app pool "for the first release". IIS recycled the pool nightly and on idle, killing in-flight scans after 90 seconds. Those scans were persisted as completed with zero findings, and nobody questioned the green screen for weeks. The fix moved scanning to a Windows Service, but it ran under a virtual account with no user profile. Git could not find credentials, `%TEMP%` pointed at `C:\Windows\Temp`, and clones failed intermittently in ways that looked like network problems. Windows Defender real-time scanning inspected every file of every clone, and scans went from four minutes to twenty-five. Then a proxy change silently blocked the Trivy DB registry. The worker kept scanning with a months-old cached DB, and every result looked current. Meanwhile, the oldest customer versions had never had `packages.lock.json`. Trivy found zero .NET packages, the parser treated it as "clean", and a critical CVE at a customer went unreported for two months. Finally, a deploy from the admin-rights runner restarted IIS and took down two unrelated internal apps. The platform was fine. The failures came from assuming IIS familiarity covered long-running processes, service identities, and the scanners' external dependencies.
 
 ### Unknown Unknowns
 
@@ -105,7 +127,11 @@ The team shipped the portal on the shared IIS server and left the scanner inside
 - **Defender on scan folders.** Real-time protection slows clones dramatically and can quarantine files from known-vulnerable packages. A scan-directory exclusion must be agreed with the security team.
 - **Data Protection keys.** Without persisted keys (`PersistKeysToFileSystem` to a folder the app pool can write to), every app-pool recycle invalidates login cookies and logs everyone out.
 - **Windows SSO prerequisites.** Silent sign-in needs the site in the browser's Local Intranet zone. A custom hostname needs an HTTP SPN on the app-pool or service account, or browsers fall back to NTLM or a prompt.
-- **.NET 10 CLI noun-first commands.** `dotnet package list --vulnerable` is the .NET 10 form; `dotnet list package` still works as an alias. NuGetAudit also runs during `restore` and emits warnings. The scanner must parse the `--format json` output of the list command and not scrape restore warnings. Pin the SDK with `global.json` so output formats don't shift.
+- **Trivy cache under the service account.** Without an explicit `--cache-dir`, the DB lands in the service profile, or it fails if the profile is missing. Use a fixed folder, e.g. `D:\trivy-cache`, that only the worker account can write.
+- **Dev dependencies are skipped by default.** This matches "what ships to the customer", but it is a product decision. If build-time tooling should count, add `--include-dev-deps`.
+- **Trivy JSON shape.** Each `Results[]` entry is one target (a lock file) with a `Vulnerabilities[]` list of `VulnerabilityID`, `PkgName`, `InstalledVersion` and `Severity`.
+  - "No targets" means no lock file was found. "Targets without vulnerabilities" means clean.
+  - The parser must tell these apart. Keep a contract test on sample output, because the format can change between Trivy versions.
 
 ## Operational Story
 
@@ -118,7 +144,7 @@ The team shipped the portal on the shared IIS server and left the scanner inside
   - To revert, point the site `physicalPath` at the previous release, re-point the service with `sc.exe config SecurityCheck.Worker binPath=...`, then restart both. This takes about 1 minute.
   - Caveat: EF Core migrations do **not** roll back. Migrations must be additive and backward-compatible for one release. A down-migration is a human decision.
 - **Approval**:
-  - *Human only:* publishing to production (manual approval on a GitHub Environment), running a destructive migration, rotating the git credential or DB password, dropping or restoring the database, and changing app-pool or service identity.
+  - *Human only:* publishing to production (manual approval on a GitHub Environment), running a destructive migration, rotating the git credential or DB password, upgrading the pinned Trivy version, dropping or restoring the database, and changing app-pool or service identity.
   - *Agent may do unattended:* build, test, deploy to staging, and read logs and status.
 - **Logs** (read-only for the agent, via PowerShell Remoting or the runner):
   - `Get-Content D:\apps\securitycheck\logs\api-stdout*.log -Tail 200` (ANCM stdout log)
@@ -131,7 +157,9 @@ The team shipped the portal on the shared IIS server and left the scanner inside
 | Risk | Source | Likelihood | Impact | Mitigation |
 |---|---|---|---|---|
 | Scan killed by app-pool recycle and recorded as clean | Pre-mortem | H (if hosted in IIS) | H | Scanner runs only in the Windows Service. Scan status is a state machine (`queued → running → succeeded/failed`), and only `succeeded` shows results. Raise `HostOptions.ShutdownTimeout`. |
-| Advisory source (nuget.org / npm registry / internal feed) unreachable produces a false "no vulnerabilities" | Devil's advocate | M | H | Pre-flight connectivity check per scan. A non-zero exit, empty or invalid JSON, or missing `sources` marks the scan **failed**. Record the proxy config on the service account. |
+| Trivy DB registry unreachable, so the scan fails or silently uses a stale cached DB | Devil's advocate | M | H | Allow `mirror.gcr.io`/`ghcr.io` through the proxy, or host a DB mirror (`--db-repository`). Store the DB `UpdatedAt` with every scan and mark the scan **failed** when the DB is older than the agreed limit. A non-zero exit or empty/invalid JSON also marks it **failed**. |
+| Repo version has no supported lock file, so zero packages is reported as clean | Devil's advocate | H | H | Before the scan, detect manifests (`*.csproj`, `package.json`) that have no matching lock file. If any are found, or Trivy returns no targets, mark the result **incomplete**, never "no vulnerabilities". |
+| Compromised Trivy release (precedent: v0.69.4, 2026-03-19) steals the git credential | Research finding | L | H | Pin the version, verify with cosign, and upgrade only with human approval. The git credential gets read-only access. Run no Trivy GitHub Action in CI with deploy secrets. |
 | Service identity has no profile, so git credentials, HOME and TEMP fail | Pre-mortem | H | M | Run the worker under a gMSA or dedicated domain account. Set explicit `HOME`/`TEMP` and a git credential via env (`GIT_ASKPASS` / header), or an SSH key in the service profile. |
 | API/worker version skew or non-reversible migration during deploy | Devil's advocate | M | M | Deploy script stops the worker → migrates → swaps API → starts the worker. Migrations are additive only. One release folder serves both processes. |
 | React Router SPA-mode constraints (root-only `loader`, no `action`) | Devil's advocate | H | L | Decide `ssr: false` before building UI routes. Data calls go to same-origin `/api/*`, with the SPA served from ASP.NET Core `wwwroot` or a static IIS app under the same site. |
@@ -141,7 +169,7 @@ The team shipped the portal on the shared IIS server and left the scanner inside
 | Users logged out on every recycle | Unknown unknowns | H | L | Persist Data Protection keys to disk (protected with DPAPI). |
 | Windows SSO prompts or NTLM fallback | Unknown unknowns | M | L | Register an HTTP SPN for the site hostname. GPO adds the site to the Local Intranet zone. |
 | PostgreSQL on Windows unowned (patching, backups) | Devil's advocate | M | H | Named owner. Nightly `pg_dump` via Task Scheduler to a separate share. Test a restore once before go-live. |
-| .NET CLI output or verb changes break the parser | Unknown unknowns / Research finding | L | M | Pin the SDK in `global.json`, parse `--format json`, keep a contract test on sample output. |
+| Trivy JSON output changes between versions and breaks the parser | Unknown unknowns | L | M | Pin the Trivy version, parse `--format json` only, and keep a contract test on sample output. |
 | HttpPlatformHandler / iisnode unsuitable for Node SSR (unmaintained, status unclear, checked 2026-09-23) | Research finding | — | — | Avoided by SPA mode. If SSR is ever needed, move to runner-up (Docker Compose). |
 | GitHub self-hosted runner fee (announced 2025-12-16, postponed; status checked 2026-09-23) | Research finding | M | L | Low CI minutes at MVP. Re-check pricing before the fee lands. |
 
@@ -152,10 +180,13 @@ The team shipped the portal on the shared IIS server and left the scanner inside
    - Create the app pool: `New-WebAppPool securitycheck`, then set `managedRuntimeVersion ''`, `startMode AlwaysRunning`, `processModel.idleTimeout 00:00:00` and `processModel.loadUserProfile true`.
    - Create the site with Windows Authentication on and Anonymous off.
    - Install PostgreSQL and create the `securitycheck` database and login.
+   - Install git and a pinned Trivy Windows binary. Never use v0.69.4. Verify it with `cosign verify-blob` against the release's sigstore bundle.
+   - Create a cache folder (e.g. `D:\trivy-cache`) writable only by the worker account.
+   - Allow `mirror.gcr.io` / `ghcr.io` through the proxy for the worker account, or set up an internal DB mirror.
 2. **Split the worker.** Add a `SecurityCheck.Worker` project (Worker Service template) with `Microsoft.Extensions.Hosting.WindowsServices` and `builder.Services.AddWindowsService()`. It shares the EF Core `DbContext` project with the API. Register it once with `New-Service -Name SecurityCheck.Worker -BinaryPathName ...\worker\SecurityCheck.Worker.exe -Credential <gMSA>`.
 3. **Switch the UI to SPA mode.** Set `ssr: false` in `web/react-router.config.ts` and build with `npm run build`. Publish `web/build/client` into the API's `wwwroot`, with `app.UseStaticFiles()` + `app.MapFallbackToFile("index.html")`, so UI and `/api` share one origin and one Windows-auth session.
 4. **Publish.**
-   - Build: `dotnet publish -c Release -o out/api` and `dotnet publish SecurityCheck.Worker -c Release -r win-x64 -o out/worker`.
+   - Build: `dotnet publish api -c Release -o out/api` and `dotnet publish SecurityCheck.Worker -c Release -r win-x64 -o out/worker`.
    - Deploy by running a script from a self-hosted runner on the server that does, in order:
      1. Copy to `releases\<sha>`.
      2. `Stop-Service SecurityCheck.Worker`.
@@ -165,6 +196,7 @@ The team shipped the portal on the shared IIS server and left the scanner inside
 5. **Verify.**
    - Check the site: `Invoke-WebRequest https://<host>/health -UseDefaultCredentials`.
    - Check the worker: `Get-Service SecurityCheck.Worker`.
+   - Check the scanner as the worker account: `trivy --cache-dir D:\trivy-cache version --format json` shows the pinned version and a fresh vulnerability DB.
    - Trigger one manual scan against a repo with a known-vulnerable package and confirm it is reported (a guardrail smoke test, not just "200 OK").
 
 ## Out of Scope
