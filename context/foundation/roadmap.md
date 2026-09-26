@@ -17,6 +17,7 @@ milestone_status: open           # open | done
 > Źródło: `context/foundation/prd.md` (v1) + `tech-stack.md` + `infrastructure.md` + automatyczny przegląd kodu.
 > Edycja w miejscu; archiwizować przy zastąpieniu.
 > Elementy poniżej są w kolejności zależności. Tabela „W skrócie” jest indeksem.
+> Backlog: GitHub Issues, milestone [M-1](https://github.com/rchmielorz/SecurityCheck-Portal/issues?q=milestone%3A%22M-1%3A+Pierwszy+wiarygodny+skan+wersji+klienta%22) — etykiety `foundation`/`slice`, `must-have`/`nice-to-have`, `north-star`, `status: ready`/`status: blocked`; zależności jako natywne „blocked by”.
 
 ## Milestone
 
@@ -39,15 +40,15 @@ Zespół maintenance nie sprawdza regularnie podatności w bibliotekach starszyc
 
 ## At a glance
 
-| ID   | Change ID              | Outcome (user can …)                                                                 | Prerequisites | PRD refs                          | Status   |
-| ---- | ---------------------- | ------------------------------------------------------------------------------------ | ------------- | --------------------------------- | -------- |
-| F-01 | authenticated-app-shell | (foundation) każda strona i endpoint wymagają zalogowania; UI i API działają pod jednym originem | —             | NFR, Access Control, FR-001       | ready    |
-| F-02 | deploy-skeleton        | (foundation) merge do `main` buduje, sprawdza i wdraża portal na serwer docelowy     | F-01, przygotowany serwer | NFR, Access Control               | proposed |
-| S-01 | repo-version-pattern   | zalogować się, dodać repozytorium i wzorzec wersji oraz zobaczyć, na jaką wersję wzorzec się rozwiązuje | F-01          | FR-001, FR-002, FR-003            | proposed |
-| S-02 | manual-version-scan    | ręcznie uruchomić skan wersji i zobaczyć podatności posortowane wg istotności albo jawne „brak wyników” | S-01          | US-01, FR-004, FR-006             | proposed |
-| S-03 | scan-history           | przejrzeć historię poprzednich skanów danej wersji i trend liczby/poziomu podatności | S-02          | FR-007                            | proposed |
-| S-04 | accepted-risk-triage   | oznaczyć podatność jako zaakceptowane ryzyko z komentarzem i odfiltrować takie pozycje w kolejnych skanach | S-02          | FR-008, FR-006, Business Logic    | proposed |
-| S-05 | scheduled-scans        | skonfigurować cykliczny, automatyczny skan danej wersji                               | S-02          | FR-005                            | proposed |
+| ID   | Issue | Change ID              | Outcome (user can …)                                                                 | Prerequisites | PRD refs                          | Status   |
+| ---- | ----- | ---------------------- | ------------------------------------------------------------------------------------ | ------------- | --------------------------------- | -------- |
+| F-01 | [#1](https://github.com/rchmielorz/SecurityCheck-Portal/issues/1) | authenticated-app-shell | (foundation) każda strona i endpoint wymagają zalogowania; UI i API działają pod jednym originem | —             | NFR, Access Control, FR-001       | ready    |
+| F-02 | [#2](https://github.com/rchmielorz/SecurityCheck-Portal/issues/2) | deploy-skeleton        | (foundation) merge do `main` buduje, sprawdza i wdraża portal na serwer docelowy     | F-01, przygotowany serwer | NFR, Access Control               | proposed |
+| S-01 | [#3](https://github.com/rchmielorz/SecurityCheck-Portal/issues/3) | repo-version-pattern   | zalogować się, dodać repozytorium i wzorzec wersji oraz zobaczyć, na jaką wersję wzorzec się rozwiązuje | F-01          | FR-001, FR-002, FR-003            | proposed |
+| S-02 | [#4](https://github.com/rchmielorz/SecurityCheck-Portal/issues/4) | manual-version-scan    | ręcznie uruchomić skan wersji i zobaczyć podatności posortowane wg istotności albo jawne „brak wyników” | S-01          | US-01, FR-004, FR-006             | proposed |
+| S-03 | [#5](https://github.com/rchmielorz/SecurityCheck-Portal/issues/5) | scan-history           | przejrzeć historię poprzednich skanów danej wersji i trend liczby/poziomu podatności | S-02          | FR-007                            | proposed |
+| S-04 | [#6](https://github.com/rchmielorz/SecurityCheck-Portal/issues/6) | accepted-risk-triage   | oznaczyć podatność jako zaakceptowane ryzyko z komentarzem i odfiltrować takie pozycje w kolejnych skanach | S-02          | FR-008, FR-006, Business Logic    | proposed |
+| S-05 | [#7](https://github.com/rchmielorz/SecurityCheck-Portal/issues/7) | scheduled-scans        | skonfigurować cykliczny, automatyczny skan danej wersji                               | S-02          | FR-005                            | proposed |
 
 ## Streams
 
@@ -170,19 +171,19 @@ Fundamenty poniżej zakładają ten stan i nie tworzą ponownie tego, co istniej
 
 ## Backlog Handoff
 
-| Roadmap ID | Change ID               | Suggested issue title                                         | Ready for `/10x-plan` | Notes |
-| ---------- | ----------------------- | ------------------------------------------------------------- | --------------------- | ----- |
-| F-01       | authenticated-app-shell | Bramka logowania i wspólna powłoka UI + API                   | yes                   | Run `/10x-plan authenticated-app-shell` |
-| F-02       | deploy-skeleton         | CI + wdrożenie na serwer docelowy ze smoke testem             | no                    | Czeka na F-01 i przygotowanie serwera |
-| S-01       | repo-version-pattern    | Dodanie repozytorium i wzorca wersji z podglądem rozwiązanej wersji | no                    | Czeka na F-01 |
-| S-02       | manual-version-scan     | Ręczny skan wersji i lista podatności wg istotności           | no                    | Czeka na S-01; gwiazda przewodnia |
-| S-03       | scan-history            | Historia skanów wersji z trendem                              | no                    | Czeka na S-02 |
-| S-04       | accepted-risk-triage    | Oznaczanie podatności jako zaakceptowane ryzyko               | no                    | Czeka na S-02 |
-| S-05       | scheduled-scans         | Cykliczne skany wersji                                        | no                    | Czeka na S-02; PRD OQ #2 |
+| Roadmap ID | Issue | Change ID               | Suggested issue title                                         | Ready for `/10x-plan` | Notes |
+| ---------- | ----- | ----------------------- | ------------------------------------------------------------- | --------------------- | ----- |
+| F-01 | [#1](https://github.com/rchmielorz/SecurityCheck-Portal/issues/1) | authenticated-app-shell | Bramka logowania i wspólna powłoka UI + API                   | yes                   | Run `/10x-plan authenticated-app-shell` |
+| F-02 | [#2](https://github.com/rchmielorz/SecurityCheck-Portal/issues/2) | deploy-skeleton         | CI + wdrożenie na serwer docelowy ze smoke testem             | no                    | Czeka na F-01 i przygotowanie serwera |
+| S-01 | [#3](https://github.com/rchmielorz/SecurityCheck-Portal/issues/3) | repo-version-pattern    | Dodanie repozytorium i wzorca wersji z podglądem rozwiązanej wersji | no                    | Czeka na F-01 |
+| S-02 | [#4](https://github.com/rchmielorz/SecurityCheck-Portal/issues/4) | manual-version-scan     | Ręczny skan wersji i lista podatności wg istotności           | no                    | Czeka na S-01; gwiazda przewodnia |
+| S-03 | [#5](https://github.com/rchmielorz/SecurityCheck-Portal/issues/5) | scan-history            | Historia skanów wersji z trendem                              | no                    | Czeka na S-02 |
+| S-04 | [#6](https://github.com/rchmielorz/SecurityCheck-Portal/issues/6) | accepted-risk-triage    | Oznaczanie podatności jako zaakceptowane ryzyko               | no                    | Czeka na S-02 |
+| S-05 | [#7](https://github.com/rchmielorz/SecurityCheck-Portal/issues/7) | scheduled-scans         | Cykliczne skany wersji                                        | no                    | Czeka na S-02; PRD OQ #2 |
 
 ## Open Roadmap Questions
 
-1. **Czy i kiedy dodać zbiorczy dashboard wielu klientów?** — Owner: użytkownik/zespół. Block: roadmap-wide (poza M-1; nie blokuje zgłoszenia).
+1. **Czy i kiedy dodać zbiorczy dashboard wielu klientów?** ([#8](https://github.com/rchmielorz/SecurityCheck-Portal/issues/8)) — Owner: użytkownik/zespół. Block: roadmap-wide (poza M-1; nie blokuje zgłoszenia).
 2. **Czy cykliczne skanowanie (FR-005) zmieści się w MVP zgłaszanym na pierwszy termin?** — Owner: użytkownik. By: 2026-11-04. Block: S-05 (nie blokuje planowania).
 3. ~~**Aktualizacja `infrastructure.md` pod skaner Trivy**~~ — rozwiązane 2026-09-26: `infrastructure.md` opisuje Trivy (sekcja „Scanner: Trivy”, rejestr ryzyk, kroki instalacji). Otwarte zostają per-slice Unknowns w S-02 (pliki blokady, źródło bazy podatności).
 
