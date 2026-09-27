@@ -1,7 +1,7 @@
 ---
 change_id: authenticated-app-shell
 title: Authenticated app shell
-status: implementing
+status: implemented
 created: 2026-09-26
 updated: 2026-09-27
 archived_at: null

@@ -556,10 +556,10 @@ Nie ma danych ani użytkowników do migrowania. Zmiana decyzji z Windows SSO na 
 
 #### Automated
 
-- [x] 4.1 Brak nieaktualnych założeń o Windows SSO w `infrastructure.md` i `AGENTS.md`
-- [x] 4.2 Build, testy i typecheck przechodzą
+- [x] 4.1 Brak nieaktualnych założeń o Windows SSO w `infrastructure.md` i `AGENTS.md` — fb623fb
+- [x] 4.2 Build, testy i typecheck przechodzą — fb623fb
 
 #### Manual
 
-- [x] 4.3 Sekwencja z `api/securitycheck-portal.http` przechodzi na prawdziwym AD
-- [x] 4.4 Przegląd `infrastructure.md` i `AGENTS.md` potwierdza zgodność z mechanizmem
+- [x] 4.3 Sekwencja z `api/securitycheck-portal.http` przechodzi na prawdziwym AD — fb623fb
+- [x] 4.4 Przegląd `infrastructure.md` i `AGENTS.md` potwierdza zgodność z mechanizmem — fb623fb
