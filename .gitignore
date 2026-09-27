@@ -480,3 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# SPA build copied into the API by web/scripts/copy-to-api.mjs
+api/wwwroot/

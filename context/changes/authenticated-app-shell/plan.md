@@ -531,26 +531,26 @@ Nie ma danych ani użytkowników do migrowania. Zmiana decyzji z Windows SSO na 
 
 #### Automated
 
-- [x] 2.1 Wszystkie testy przechodzą: `dotnet test api.Tests`
-- [x] 2.2 Test ochronny zawodzi przy tymczasowym anonimowym endpoincie spoza listy
+- [x] 2.1 Wszystkie testy przechodzą: `dotnet test api.Tests` — 2e20e6a
+- [x] 2.2 Test ochronny zawodzi przy tymczasowym anonimowym endpoincie spoza listy — 2e20e6a
 
 ### Phase 3: Powłoka SPA
 
 #### Automated
 
-- [ ] 3.1 Typy i trasy są poprawne: `cd web && npm run typecheck`
-- [ ] 3.2 `npm run build:api` przechodzi i tworzy `api/wwwroot/index.html`
-- [ ] 3.3 Brak odwołań do zewnętrznych czcionek w `web/app`
-- [ ] 3.4 API nadal się kompiluje i testy przechodzą
+- [x] 3.1 Typy i trasy są poprawne: `cd web && npm run typecheck`
+- [x] 3.2 `npm run build:api` przechodzi i tworzy `api/wwwroot/index.html`
+- [x] 3.3 Brak odwołań do zewnętrznych czcionek w `web/app`
+- [x] 3.4 API nadal się kompiluje i testy przechodzą
 
 #### Manual
 
-- [ ] 3.5 Wejście bez sesji na `http://localhost:5173/` pokazuje formularz logowania
-- [ ] 3.6 Zalogowanie kontem z grupy pokazuje nagłówek z nazwą wyświetlaną i pusty stan
-- [ ] 3.7 Złe hasło, konto spoza grupy i wyłączony LDAP pokazują trzy różne polskie komunikaty
-- [ ] 3.8 Głęboki link wraca po zalogowaniu; `?next=//example.com` przekierowuje na `/`
-- [ ] 3.9 „Wyloguj” wraca do formularza, a Wstecz nie pokazuje danych
-- [ ] 3.10 Po `build:api` samo API serwuje UI i logowanie działa bez Vite
+- [x] 3.5 Wejście bez sesji na `http://localhost:5173/` pokazuje formularz logowania
+- [x] 3.6 Zalogowanie kontem z grupy pokazuje nagłówek z nazwą wyświetlaną i pusty stan
+- [x] 3.7 Złe hasło, konto spoza grupy i wyłączony LDAP pokazują trzy różne polskie komunikaty
+- [x] 3.8 Głęboki link wraca po zalogowaniu; `?next=//example.com` przekierowuje na `/`
+- [x] 3.9 „Wyloguj” wraca do formularza, a Wstecz nie pokazuje danych
+- [x] 3.10 Po `build:api` samo API serwuje UI i logowanie działa bez Vite
 
 ### Phase 4: Dokumentacja i porządki
 

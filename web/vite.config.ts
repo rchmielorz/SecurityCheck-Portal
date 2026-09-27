@@ -7,4 +7,11 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
+  server: {
+    // In dev the browser talks only to Vite; /api is forwarded to Kestrel
+    // (api/Properties/launchSettings.json, profile "http").
+    proxy: {
+      "/api": "http://localhost:5143",
+    },
+  },
 });
