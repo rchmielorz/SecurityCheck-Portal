@@ -27,7 +27,9 @@ SecurityCheck Portal is an internal tool that scans dependencies of customer-dep
 
 ## Testing
 
-No test project or UI test runner exists yet. When adding the first tests, create a separate `*.Tests` project in its own top-level folder (outside `api/` and `web/`) and note the command here.
+- `dotnet test api.Tests` — run the API tests (xUnit, `api.Tests/securitycheck-portal.Tests.csproj`). They host the API in-memory with a fake LDAP authenticator (`api.Tests/PortalFactory.cs`) and need no network or AD.
+- Every new anonymous endpoint must be added on purpose to the allow-list in `api.Tests/NoPublicEndpointsTests.cs`; otherwise that test fails.
+- No UI test runner exists yet.
 
 ## Commits and Pull Requests
 

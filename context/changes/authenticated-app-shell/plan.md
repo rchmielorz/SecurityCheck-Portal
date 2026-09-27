@@ -518,21 +518,21 @@ Nie ma danych ani użytkowników do migrowania. Zmiana decyzji z Windows SSO na 
 
 #### Automated
 
-- [x] 1.1 API kompiluje się bez ostrzeżeń nullable w nowych plikach: `dotnet build api`
-- [x] 1.2 W repozytorium nie ma już `weatherforecast`: `git grep -i weatherforecast -- api` nic nie zwraca
-- [x] 1.3 `appsettings*.json` nie zawiera `SigningKey` z wartością
+- [x] 1.1 API kompiluje się bez ostrzeżeń nullable w nowych plikach: `dotnet build api` — 55e651a
+- [x] 1.2 W repozytorium nie ma już `weatherforecast`: `git grep -i weatherforecast -- api` nic nie zwraca — 55e651a
+- [x] 1.3 `appsettings*.json` nie zawiera `SigningKey` z wartością — 55e651a
 
 #### Manual
 
-- [x] 1.4 Bez `Auth:Jwt:SigningKey` API odmawia startu z czytelnym błędem walidacji
-- [x] 1.5 Logowanie prawdziwym kontem z grupy zwraca 200 i ciasteczko `sc_auth`, `GET /api/me` zwraca nazwę wyświetlaną
+- [x] 1.4 Bez `Auth:Jwt:SigningKey` API odmawia startu z czytelnym błędem walidacji — 55e651a
+- [x] 1.5 Logowanie prawdziwym kontem z grupy zwraca 200 i ciasteczko `sc_auth`, `GET /api/me` zwraca nazwę wyświetlaną — 55e651a
 
 ### Phase 2: Projekt testowy i test ochronny
 
 #### Automated
 
-- [ ] 2.1 Wszystkie testy przechodzą: `dotnet test api.Tests`
-- [ ] 2.2 Test ochronny zawodzi przy tymczasowym anonimowym endpoincie spoza listy
+- [x] 2.1 Wszystkie testy przechodzą: `dotnet test api.Tests`
+- [x] 2.2 Test ochronny zawodzi przy tymczasowym anonimowym endpoincie spoza listy
 
 ### Phase 3: Powłoka SPA
 
