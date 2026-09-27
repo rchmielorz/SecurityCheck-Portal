@@ -510,6 +510,23 @@ Nie ma danych ani użytkowników do migrowania. Zmiana decyzji z Windows SSO na 
 - Dokumentacja Microsoftu, Windows Authentication (powód odrzucenia Negotiate za proxy): https://learn.microsoft.com/en-us/aspnet/core/security/authentication/windowsauth?view=aspnetcore-10.0
 - Tryb SPA w React Router: `web/.agents/skills/react-router/references/framework-mode.md`
 
+## Addendum (2026-09-27): odstępstwa od planu
+
+### Z implementacji (Phase 3)
+
+- `routes.ts`: trasa `route("*", "routes/not-found.tsx")` jako dziecko chronionego layoutu. Bez niej nieznana ścieżka daje 404 w root, zanim `clientLoader` layoutu przekieruje na `/login?next=…` (wymaganie z 3.8). Zalogowany użytkownik widzi polskie 404 w powłoce.
+- `app-layout.tsx`: `shouldRevalidate` zawsze `true`. Wygaśnięcie sesji wychodzi przy następnej nawigacji, kosztem jednego `GET /api/me` na nawigację.
+- `api.ts`: `requireUser(request)` zamiast `requireUser()`, bo przy nawigacji klienckiej `window.location` pokazuje jeszcze poprzedni adres.
+
+### Po przeglądzie implementacji (`reviews/impl-review.md`)
+
+- F1: timeouty bind i search przez `LdapConstraints.TimeLimit` / `LdapSearchConstraints` (Novell ignoruje token anulowania przy oczekiwaniu na odpowiedź).
+- F2: filtr wyszukiwania używa `userPrincipalName={login}@{UpnSuffix}` zamiast `sAMAccountName` (Phase 1.3). `sub` pochodzi z `sAMAccountName` wpisu.
+- F3: obok limitu per IP (Phase 1.6) limit nieudanych logowań per konto: 5 na 15 minut (`FailedLoginThrottle`). Komunikat 429: „Zbyt wiele prób logowania. Spróbuj ponownie później.”
+- F4: niepoprawny format loginu logowany jako `<invalid>`.
+- F5: reguła w AGENTS.md: bez kropki w ostatnim segmencie adresu trasy UI.
+- F6: `apiFetch(path, init, request?)`: z `request` 401 rzuca przekierowanie na logowanie (zgodnie z intencją Phase 3.3).
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles. See `references/progress-format.md`.

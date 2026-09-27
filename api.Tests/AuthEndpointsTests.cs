@@ -101,9 +101,10 @@ public sealed class AuthEndpointsTests(PortalFactory factory) : IClassFixture<Po
         var remoteIp = PortalFactory.NextRemoteIp();
         using var client = factory.CreatePortalClient(remoteIp: remoteIp);
 
+        // Its own login, so the per-account throttle does not block alice in other tests.
         for (var attempt = 1; attempt <= 5; attempt++)
         {
-            using var allowed = await LoginAsync(client, "alice", "wrong-password");
+            using var allowed = await LoginAsync(client, "carol", "wrong-password");
             Assert.Equal(HttpStatusCode.Unauthorized, allowed.StatusCode);
         }
 
@@ -114,6 +115,24 @@ public sealed class AuthEndpointsTests(PortalFactory factory) : IClassFixture<Po
         using var otherClient = factory.CreatePortalClient();
         using var other = await LoginAsync(otherClient, "alice", FakeLdapAuthenticator.ValidPassword);
         Assert.Equal(HttpStatusCode.OK, other.StatusCode);
+    }
+
+    [Fact]
+    public async Task Sixth_attempt_after_five_failures_for_one_account_returns_429_from_any_address()
+    {
+        for (var attempt = 1; attempt <= FailedLoginThrottle.PermitLimit; attempt++)
+        {
+            using var client = factory.CreatePortalClient();
+            using var failed = await LoginAsync(client, "dave", "wrong-password");
+            Assert.Equal(HttpStatusCode.Unauthorized, failed.StatusCode);
+        }
+
+        var callsBefore = factory.Ldap.CallCount;
+        using var freshClient = factory.CreatePortalClient();
+        using var limited = await LoginAsync(freshClient, "DAVE", "wrong-password");
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
+        Assert.Equal(callsBefore, factory.Ldap.CallCount);
     }
 
     [Fact]

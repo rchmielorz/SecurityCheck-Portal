@@ -30,6 +30,7 @@ public static class AuthEndpoints
         HttpContext httpContext,
         ILdapAuthenticator authenticator,
         JwtIssuer jwtIssuer,
+        FailedLoginThrottle throttle,
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
@@ -39,7 +40,19 @@ public static class AuthEndpoints
             return Results.BadRequest();
         }
 
+        // Invalid-format logins never reach LDAP, so only valid ones can count toward AD lockout.
+        var countsTowardLockout = LdapFilter.IsValidUserName(request.UserName);
+        if (countsTowardLockout && throttle.IsBlocked(request.UserName))
+        {
+            return Results.StatusCode(StatusCodes.Status429TooManyRequests);
+        }
+
         var result = await authenticator.AuthenticateAsync(request.UserName, request.Password, cancellationToken);
+
+        if (countsTowardLockout && result is LdapAuthResult.InvalidCredentials)
+        {
+            throttle.RecordFailure(request.UserName);
+        }
 
         if (result is LdapAuthResult.Success success)
         {
@@ -47,10 +60,12 @@ public static class AuthEndpoints
             return Results.Ok(new CurrentUser(success.UserName, success.DisplayName));
         }
 
-        // Never log the password.
+        // Never log the password, and never log raw input: an invalid login may carry CR/LF or a
+        // password typed into the wrong field.
         var logger = loggerFactory.CreateLogger(typeof(AuthEndpoints).FullName!);
         logger.LogWarning("Failed login for {UserName} from {RemoteIp}: {Outcome}",
-            request.UserName, httpContext.Connection.RemoteIpAddress, result.GetType().Name);
+            countsTowardLockout ? request.UserName : "<invalid>",
+            httpContext.Connection.RemoteIpAddress, result.GetType().Name);
 
         return result switch
         {

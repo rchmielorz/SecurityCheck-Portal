@@ -14,7 +14,7 @@ namespace securitycheck_portal.Auth;
 public sealed class LdapAuthenticator(IOptions<LdapOptions> options, ILogger<LdapAuthenticator> logger)
     : ILdapAuthenticator
 {
-    private static readonly string[] Attributes = ["displayName"];
+    private static readonly string[] Attributes = ["sAMAccountName", "displayName"];
 
     public async Task<LdapAuthResult> AuthenticateAsync(
         string userName, string password, CancellationToken cancellationToken)
@@ -29,10 +29,13 @@ public sealed class LdapAuthenticator(IOptions<LdapOptions> options, ILogger<Lda
         var settings = options.Value;
         var timeout = TimeSpan.FromSeconds(settings.ConnectTimeoutSeconds);
 
-        // The timeout bounds the whole exchange (connect, TLS handshake, bind, search).
+        // The token only bounds connect and TLS: Novell's reply waits ignore it. Bind and search
+        // are bounded separately by TimeLimit below and time out as LdapException (code 85).
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(timeout);
         var token = timeoutCts.Token;
+        var timeoutMs = (int)timeout.TotalMilliseconds;
+        var userPrincipalName = $"{userName}@{settings.UpnSuffix}";
 
         var connectionOptions = new LdapConnectionOptions()
             .UseSsl()
@@ -40,7 +43,8 @@ public sealed class LdapAuthenticator(IOptions<LdapOptions> options, ILogger<Lda
 
         using var connection = new LdapConnection(connectionOptions)
         {
-            ConnectionTimeout = (int)timeout.TotalMilliseconds,
+            ConnectionTimeout = timeoutMs,
+            Constraints = new LdapConstraints { TimeLimit = timeoutMs },
         };
 
         try
@@ -49,7 +53,7 @@ public sealed class LdapAuthenticator(IOptions<LdapOptions> options, ILogger<Lda
 
             try
             {
-                await connection.BindAsync($"{userName}@{settings.UpnSuffix}", password, token);
+                await connection.BindAsync(userPrincipalName, password, token);
             }
             catch (LdapException ex) when (ex.ResultCode == LdapException.InvalidCredentials)
             {
@@ -59,9 +63,14 @@ public sealed class LdapAuthenticator(IOptions<LdapOptions> options, ILogger<Lda
             var results = await connection.SearchAsync(
                 settings.SearchBase,
                 LdapConnection.ScopeSub,
-                LdapFilter.UserInGroup(userName, settings.AllowedGroupDn),
+                LdapFilter.UserInGroup(userPrincipalName, settings.AllowedGroupDn),
                 Attributes,
                 false,
+                new LdapSearchConstraints
+                {
+                    TimeLimit = timeoutMs,
+                    ServerTimeLimit = settings.ConnectTimeoutSeconds,
+                },
                 token);
 
             while (await results.HasMoreAsync(token))
@@ -77,9 +86,16 @@ public sealed class LdapAuthenticator(IOptions<LdapOptions> options, ILogger<Lda
                     continue;
                 }
 
+                // The directory's sAMAccountName, not the typed login, is the canonical identity (case).
+                var accountName = entry.GetStringValueOrDefault("sAMAccountName", null);
+                if (string.IsNullOrWhiteSpace(accountName))
+                {
+                    accountName = userName;
+                }
+
                 var displayName = entry.GetStringValueOrDefault("displayName", null);
                 return new LdapAuthResult.Success(
-                    userName, string.IsNullOrWhiteSpace(displayName) ? userName : displayName);
+                    accountName, string.IsNullOrWhiteSpace(displayName) ? accountName : displayName);
             }
 
             return new LdapAuthResult.NotInGroup();

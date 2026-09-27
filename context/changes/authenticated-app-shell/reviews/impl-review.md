@@ -7,6 +7,7 @@
 - **Date**: 2026-09-27
 - **Verdict**: NEEDS ATTENTION
 - **Findings**: 0 critical, 4 warnings, 6 observations
+- **Triage (2026-09-27)**: Fixed F1–F9 (F3 and F8 by a different approach, F6 via Fix A); Skipped F10. Follow-ups: `follow-ups/review-fixes.md`.
 
 ## Verdicts
 
@@ -47,7 +48,7 @@
   - Tradeoff: No automated test can reproduce a silent DC. It needs a manual check, or a TCP listener that accepts connections and never replies.
   - Confidence: MED — the API surface was confirmed by reflection, but runtime behaviour of `TimeLimit` on bind was not exercised.
   - Blind spot: Whether `TimeLimit` applies to the TLS handshake phase. An outer `Task.WaitAsync(timeout)` would give a hard upper bound.
-- **Decision**: PENDING
+- **Decision**: FIXED — TimeLimit on connection constraints and search constraints, comment corrected (build 0 warnings, 43/43 tests). Runtime behaviour against a silent DC not verified.
 
 ### F2 — Bind identity (UPN) and authorized identity (sAMAccountName) can diverge
 
@@ -65,7 +66,7 @@
   - Tradeoff: Adds one attribute and changes the filter. `LdapFilter` tests and the fake need small updates.
   - Confidence: HIGH — this is the standard way to close the bind/search gap in AD.
   - Blind spot: The company's actual UPN/sAMAccountName convention is unknown. If they always match, the exposure today is theoretical.
-- **Decision**: PENDING
+- **Decision**: FIXED — the search filter now uses `userPrincipalName` (the bound name), and `sub`/`userName` come from the entry's `sAMAccountName`. `LdapFilterTests` updated (43/43). Re-run manual check 1.5 on real AD: if the `userPrincipalName` attribute is not literally `{login}@{UpnSuffix}`, login fails closed with 403. The plan's filter contract (Phase 1.3) is now out of date.
 
 ### F3 — Per-IP-only rate limit still allows AD account lockout
 
@@ -79,7 +80,7 @@
   - Tradeoff: An attacker can still lock the portal (not AD) for a named user for the window.
   - Confidence: HIGH — `PartitionedRateLimiter.CreateChained` is built in.
   - Blind spot: The actual AD lockout threshold and observation window are not known.
-- **Decision**: PENDING
+- **Decision**: FIXED (different mechanism) — the new `FailedLoginThrottle` singleton counts `InvalidCredentials` per lower-cased valid login (5 per 15 min) and returns 429 before LDAP, because the body-keyed limit cannot live in the rate-limiter middleware. The IP test now uses `carol`, and a new per-account test was added (44/44). The 429 message in `login.tsx` is now "Spróbuj ponownie później." The plan (Phase 1.6) and the infrastructure.md risk row still describe only the per-IP limit.
 
 ### F4 — Raw, unvalidated username written to logs
 
@@ -89,7 +90,7 @@
 - **Location**: api/Auth/AuthEndpoints.cs:52-53
 - **Detail**: `LogWarning("Failed login for {UserName} ...", request.UserName, ...)` logs the input before any format validation, so it can contain CR/LF (log forging in plain-text sinks), be unbounded in length, or contain a password typed into the login field by mistake.
 - **Fix**: Log `request.UserName` only when `LdapFilter.IsValidUserName` passes. Otherwise log a fixed placeholder such as `"<invalid>"`.
-- **Decision**: PENDING
+- **Decision**: FIXED — an invalid-format login is logged as `<invalid>` (44/44 tests).
 
 ### F5 — SPA fallback `{*path:nonfile}` rejects paths with a dot in the last segment
 
@@ -103,7 +104,7 @@
   - Tradeoff: It is a constraint S-01 must remember.
   - Confidence: HIGH — the behaviour is visible in `NoPublicEndpointsTests.cs:16`.
   - Blind spot: S-01's URL design does not exist yet.
-- **Decision**: PENDING
+- **Decision**: FIXED — the no-dot URL constraint was added to AGENTS.md Hard Rules; the fallback code is unchanged.
 
 ### F6 — `apiFetch` does not handle 401 as the plan intended
 
@@ -122,7 +123,7 @@
   - Tradeoff: A 401 in the middle of an action (e.g. a form post) surfaces as a generic error.
   - Confidence: MED — works for read-only pages, less so for actions.
   - Blind spot: S-01's use of `clientAction`.
-- **Decision**: PENDING
+- **Decision**: FIXED via Fix A (variant) — `apiFetch` takes an optional route `request`; with one, a 401 throws the login redirect. `requireUser` reuses it. Calls without a request (login page, logout click handler) are unchanged. Typecheck and build:api pass; not exercised in the browser.
 
 ### F7 — Unplanned catch-all route and layout revalidation
 
@@ -132,7 +133,7 @@
 - **Location**: web/app/routes.ts:14, web/app/routes/not-found.tsx, web/app/routes/app-layout.tsx:15-17, web/app/lib/api.ts:33
 - **Detail**: These were added beyond the plan: `route("*", "routes/not-found.tsx")` under the protected layout, `shouldRevalidate → true`, and `requireUser(request)` instead of `requireUser()`. All three are justified. The catch-all is needed for manual check 3.8 (an anonymous deep link redirects to login instead of a root 404). The other two fix URL and expiry detection. None of them is documented in the plan.
 - **Fix**: Add a short addendum to plan.md (or a change.md note) listing these three deviations and why they were made.
-- **Decision**: PENDING
+- **Decision**: FIXED — added "Addendum (2026-09-27)" to plan.md covering these three deviations and the review-driven changes from F1–F6.
 
 ### F8 — Logout ignores a failed response
 
@@ -142,7 +143,7 @@
 - **Location**: web/app/routes/app-layout.tsx:24-36
 - **Detail**: `response.ok` is not checked. If logout fails (network or 5xx), the cookie survives. The code navigates to `/login`, whose `clientLoader` gets 200 from `/api/me` and redirects back to `/`, so the user silently stays logged in. Also, a network error in `requireUser` shows the generic root error with no path back to login.
 - **Fix**: When logout fails, show an inline "Nie udało się wylogować" message instead of navigating.
-- **Decision**: PENDING
+- **Decision**: FIXED (differently) — the logout retries once; 204 and 401 count as success; otherwise it stays on the page and shows "Nie udało się wylogować. Spróbuj ponownie." Typecheck passes; not exercised in the browser. The `requireUser` network-error path is unchanged.
 
 ### F9 — `index.html` served without `Cache-Control: no-cache`
 
@@ -152,7 +153,7 @@
 - **Location**: api/Program.cs:107, :125; web/scripts/copy-to-api.mjs:16
 - **Detail**: `index.html` is served with no `Cache-Control` header, so browsers may cache it heuristically. `copy-to-api.mjs` deletes the old hashed assets on each build. After a redeploy, a cached `index.html` references deleted assets and the app breaks until a hard refresh. This matters more once F-02 deploys regularly.
 - **Fix**: Set `Cache-Control: no-cache` for `index.html` via `StaticFileOptions.OnPrepareResponse` and on the fallback (can be deferred to F-02).
-- **Decision**: PENDING
+- **Decision**: FIXED — shared `spaFileOptions` sets `no-cache` on `index.html` for both `UseStaticFiles` and `MapFallbackToFile`; the SPA fallback test asserts the header (44/44).
 
 ### F10 — Stale SSR leftovers after the switch to SPA mode
 
@@ -162,7 +163,7 @@
 - **Location**: web/package.json:9,13-15; web/Dockerfile
 - **Detail**: With `ssr: false` there is no `build/server` any more. The following are now dead: `"start": "react-router-serve ./build/server/index.js"`, the Dockerfile `CMD ["npm","run","start"]`, and the `@react-router/node`, `@react-router/serve` and `isbot` dependencies. The plan did not ask for this cleanup, so it is not drift, but the leftovers point future agents at a server that no longer exists.
 - **Fix**: Remove the `start` script, the three dependencies and `web/Dockerfile`, or leave them for F-02 (deploy-skeleton).
-- **Decision**: PENDING
+- **Decision**: SKIPPED
 
 ## Noted, not raised as findings
 

@@ -8,20 +8,37 @@ export type CurrentUser = {
 /**
  * Shared fetch for the portal API. The auth cookie (sc_auth) is HttpOnly and
  * same-origin: in dev Vite proxies /api to Kestrel, in production the API
- * serves the SPA itself.
+ * serves the SPA itself. Loaders and actions pass their `request`: then a 401
+ * (expired or missing session) throws a redirect to the login page carrying
+ * the current path in `next`.
  */
-export function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+export async function apiFetch(
+  path: string,
+  init: RequestInit = {},
+  request?: Request,
+): Promise<Response> {
   const headers = new Headers(init.headers);
   headers.set("Accept", "application/json");
   if (init.body != null && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
-  return fetch(path, {
+  const response = await fetch(path, {
     ...init,
     headers,
     credentials: "same-origin",
   });
+
+  if (request && response.status === 401) {
+    throw loginRedirect(request);
+  }
+
+  return response;
+}
+
+function loginRedirect(request: Request): Response {
+  const url = new URL(request.url);
+  return redirect("/login?next=" + encodeURIComponent(url.pathname + url.search));
 }
 
 /**
@@ -31,12 +48,8 @@ export function apiFetch(path: string, init: RequestInit = {}): Promise<Response
  * previous URL.
  */
 export async function requireUser(request: Request): Promise<CurrentUser> {
-  const response = await apiFetch("/api/me", { signal: request.signal });
+  const response = await apiFetch("/api/me", { signal: request.signal }, request);
 
-  if (response.status === 401) {
-    const url = new URL(request.url);
-    throw redirect("/login?next=" + encodeURIComponent(url.pathname + url.search));
-  }
   if (!response.ok) {
     throw new Error(`GET /api/me failed with status ${response.status}`);
   }

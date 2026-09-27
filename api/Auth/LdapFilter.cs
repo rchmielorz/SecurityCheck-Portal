@@ -38,10 +38,11 @@ public static partial class LdapFilter
 
     /// <summary>
     /// Finds the user entry only when it is a member of <paramref name="allowedGroupDn"/>,
-    /// including nested membership (LDAP_MATCHING_RULE_IN_CHAIN).
+    /// including nested membership (LDAP_MATCHING_RULE_IN_CHAIN). Searching by the same UPN that
+    /// was bound guarantees the authorized entry is the bound account.
     /// </summary>
-    public static string UserInGroup(string userName, string allowedGroupDn) =>
-        $"(&(objectClass=user)(sAMAccountName={Escape(userName)})" +
+    public static string UserInGroup(string userPrincipalName, string allowedGroupDn) =>
+        $"(&(objectClass=user)(userPrincipalName={Escape(userPrincipalName)})" +
         $"(memberOf:1.2.840.113556.1.4.1941:={Escape(allowedGroupDn)}))";
 
     // \z instead of $: in .NET, $ also matches before a trailing newline.

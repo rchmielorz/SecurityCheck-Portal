@@ -26,6 +26,7 @@ builder.Services.AddOptions<JwtOptions>()
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<JwtIssuer>();
 builder.Services.AddSingleton<ILdapAuthenticator, LdapAuthenticator>();
+builder.Services.AddSingleton<FailedLoginThrottle>();
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -103,8 +104,21 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
+// index.html must be revalidated on every load: each build replaces the hashed assets it
+// references, so a cached copy would point at files that no longer exist.
+var spaFileOptions = new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        if (string.Equals(ctx.File.Name, "index.html", StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Context.Response.Headers.CacheControl = "no-cache";
+        }
+    },
+};
+
 // SPA assets are public: they render the login form and contain no data.
-app.UseStaticFiles();
+app.UseStaticFiles(spaFileOptions);
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -122,7 +136,7 @@ app.MapAuthEndpoints();
 app.Map("/api/{**rest}", () => Results.NotFound())
     .ExcludeFromDescription();
 
-app.MapFallbackToFile("index.html")
+app.MapFallbackToFile("index.html", spaFileOptions)
     .AllowAnonymous();
 
 app.Run();

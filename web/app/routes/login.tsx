@@ -8,7 +8,7 @@ const ERROR_MESSAGES: Record<number, string> = {
   401: "Nieprawidłowy login lub hasło.",
   403: "Twoje konto nie ma dostępu do portalu.",
   503: "Usługa logowania jest niedostępna. Spróbuj później.",
-  429: "Zbyt wiele prób logowania. Odczekaj minutę.",
+  429: "Zbyt wiele prób logowania. Spróbuj ponownie później.",
 };
 
 const UNEXPECTED_ERROR = "Wystąpił nieoczekiwany błąd.";

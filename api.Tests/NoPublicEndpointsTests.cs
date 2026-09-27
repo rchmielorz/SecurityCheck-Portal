@@ -70,6 +70,7 @@ public sealed class NoPublicEndpointsTests(PortalFactory factory) : IClassFixtur
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
         Assert.Equal(PortalFactory.IndexHtml, await response.Content.ReadAsStringAsync());
+        Assert.True(response.Headers.CacheControl?.NoCache);
     }
 
     private static string Describe(RouteEndpoint endpoint)

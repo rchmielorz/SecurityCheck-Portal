@@ -5,6 +5,7 @@ SecurityCheck Portal is an internal tool that scans dependencies of customer-dep
 ## Hard Rules
 
 - Every API endpoint and UI route must require authentication; the PRD forbids any public page (@context/foundation/prd.md, Non-Functional Requirements). The API enforces this with a fallback authorization policy. The only anonymous exceptions are `POST /api/auth/login` and the SPA files (static assets + `index.html` fallback, which render only the login form); `api.Tests/NoPublicEndpointsTests.cs` fails on any other (see Testing).
+- UI route URLs must not have a dot in the last path segment (e.g. `/repos/x/2.1.*`, `/users/jan.kowalski`): the API serves `index.html` through `MapFallbackToFile` (`{*path:nonfile}`), so such deep links get 401/404 instead of the SPA. Use IDs in the path and put values like version patterns in the query string, or replace the fallback route on purpose.
 - Do not write CVE/dependency-analysis logic. Detection must delegate to the external scanner, Trivy (PRD Non-Goals).
 - A scan must run against the code matching the declared version pattern (e.g. `2.1.*`), never the default branch.
 - Never write under `context/archive/`; it is read-only. Change-scoped docs go in `context/changes/<change-id>/`; foundation docs are edited in place (@context/foundation/README.md).

@@ -20,10 +20,10 @@ public sealed class LdapFilterTests
     [Fact]
     public void UserInGroup_escapes_both_the_login_and_the_group_dn()
     {
-        var filter = LdapFilter.UserInGroup("a*", "CN=Team (Ops),DC=example,DC=invalid");
+        var filter = LdapFilter.UserInGroup("a*@example.invalid", "CN=Team (Ops),DC=example,DC=invalid");
 
         Assert.Equal(
-            @"(&(objectClass=user)(sAMAccountName=a\2a)" +
+            @"(&(objectClass=user)(userPrincipalName=a\2a@example.invalid)" +
             @"(memberOf:1.2.840.113556.1.4.1941:=CN=Team \28Ops\29,DC=example,DC=invalid))",
             filter);
     }
