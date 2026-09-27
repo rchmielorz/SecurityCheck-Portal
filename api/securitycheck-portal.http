@@ -1,6 +1,7 @@
 @securitycheck_portal_HostAddress = http://localhost:5143
 
-GET {{securitycheck_portal_HostAddress}}/weatherforecast/
+# Requires a session cookie from POST /api/auth/login; returns 401 without one.
+GET {{securitycheck_portal_HostAddress}}/api/me
 Accept: application/json
 
 ###
