@@ -3,7 +3,7 @@ project: SecurityCheck Portal
 version: 1
 status: draft                    # draft | active | locked
 created: 2026-09-26
-updated: 2026-09-26
+updated: 2026-09-27
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -42,7 +42,7 @@ Zespół maintenance nie sprawdza regularnie podatności w bibliotekach starszyc
 
 | ID   | Issue | Change ID              | Outcome (user can …)                                                                 | Prerequisites | PRD refs                          | Status   |
 | ---- | ----- | ---------------------- | ------------------------------------------------------------------------------------ | ------------- | --------------------------------- | -------- |
-| F-01 | [#1](https://github.com/rchmielorz/SecurityCheck-Portal/issues/1) | authenticated-app-shell | (foundation) każda strona i endpoint wymagają zalogowania; UI i API działają pod jednym originem | —             | NFR, Access Control, FR-001       | ready    |
+| F-01 | [#1](https://github.com/rchmielorz/SecurityCheck-Portal/issues/1) | authenticated-app-shell | (foundation) każda strona i endpoint wymagają zalogowania; UI i API działają pod jednym originem | —             | NFR, Access Control, FR-001       | planning |
 | F-02 | [#2](https://github.com/rchmielorz/SecurityCheck-Portal/issues/2) | deploy-skeleton        | (foundation) merge do `main` buduje, sprawdza i wdraża portal na serwer docelowy     | F-01, przygotowany serwer | NFR, Access Control               | proposed |
 | S-01 | [#3](https://github.com/rchmielorz/SecurityCheck-Portal/issues/3) | repo-version-pattern   | zalogować się, dodać repozytorium i wzorzec wersji oraz zobaczyć, na jaką wersję wzorzec się rozwiązuje | F-01          | FR-001, FR-002, FR-003            | proposed |
 | S-02 | [#4](https://github.com/rchmielorz/SecurityCheck-Portal/issues/4) | manual-version-scan    | ręcznie uruchomić skan wersji i zobaczyć podatności posortowane wg istotności albo jawne „brak wyników” | S-01          | US-01, FR-004, FR-006             | proposed |
@@ -86,7 +86,7 @@ Fundamenty poniżej zakładają ten stan i nie tworzą ponownie tego, co istniej
 - **Unknowns:**
   - Metoda logowania: firmowe SSO (rekomendacja `infrastructure.md`) czy email/hasło (PRD dopuszcza oba)? — Owner: user. Block: no (domyślnie SSO).
 - **Risk:** Sequenced first, bo NFR zakazuje publicznej strony — każda funkcja zbudowana przed bramką musiałaby być potem zabezpieczana wstecz. Zakres ograniczony do bramki i powłoki; żadnych ekranów domenowych.
-- **Status:** ready
+- **Status:** planning
 
 ### F-02: Szkielet wdrożenia
 
