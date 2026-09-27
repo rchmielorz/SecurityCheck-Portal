@@ -538,28 +538,28 @@ Nie ma danych ani użytkowników do migrowania. Zmiana decyzji z Windows SSO na 
 
 #### Automated
 
-- [x] 3.1 Typy i trasy są poprawne: `cd web && npm run typecheck`
-- [x] 3.2 `npm run build:api` przechodzi i tworzy `api/wwwroot/index.html`
-- [x] 3.3 Brak odwołań do zewnętrznych czcionek w `web/app`
-- [x] 3.4 API nadal się kompiluje i testy przechodzą
+- [x] 3.1 Typy i trasy są poprawne: `cd web && npm run typecheck` — 07e03fb
+- [x] 3.2 `npm run build:api` przechodzi i tworzy `api/wwwroot/index.html` — 07e03fb
+- [x] 3.3 Brak odwołań do zewnętrznych czcionek w `web/app` — 07e03fb
+- [x] 3.4 API nadal się kompiluje i testy przechodzą — 07e03fb
 
 #### Manual
 
-- [x] 3.5 Wejście bez sesji na `http://localhost:5173/` pokazuje formularz logowania
-- [x] 3.6 Zalogowanie kontem z grupy pokazuje nagłówek z nazwą wyświetlaną i pusty stan
-- [x] 3.7 Złe hasło, konto spoza grupy i wyłączony LDAP pokazują trzy różne polskie komunikaty
-- [x] 3.8 Głęboki link wraca po zalogowaniu; `?next=//example.com` przekierowuje na `/`
-- [x] 3.9 „Wyloguj” wraca do formularza, a Wstecz nie pokazuje danych
-- [x] 3.10 Po `build:api` samo API serwuje UI i logowanie działa bez Vite
+- [x] 3.5 Wejście bez sesji na `http://localhost:5173/` pokazuje formularz logowania — 07e03fb
+- [x] 3.6 Zalogowanie kontem z grupy pokazuje nagłówek z nazwą wyświetlaną i pusty stan — 07e03fb
+- [x] 3.7 Złe hasło, konto spoza grupy i wyłączony LDAP pokazują trzy różne polskie komunikaty — 07e03fb
+- [x] 3.8 Głęboki link wraca po zalogowaniu; `?next=//example.com` przekierowuje na `/` — 07e03fb
+- [x] 3.9 „Wyloguj” wraca do formularza, a Wstecz nie pokazuje danych — 07e03fb
+- [x] 3.10 Po `build:api` samo API serwuje UI i logowanie działa bez Vite — 07e03fb
 
 ### Phase 4: Dokumentacja i porządki
 
 #### Automated
 
-- [ ] 4.1 Brak nieaktualnych założeń o Windows SSO w `infrastructure.md` i `AGENTS.md`
-- [ ] 4.2 Build, testy i typecheck przechodzą
+- [x] 4.1 Brak nieaktualnych założeń o Windows SSO w `infrastructure.md` i `AGENTS.md`
+- [x] 4.2 Build, testy i typecheck przechodzą
 
 #### Manual
 
-- [ ] 4.3 Sekwencja z `api/securitycheck-portal.http` przechodzi na prawdziwym AD
-- [ ] 4.4 Przegląd `infrastructure.md` i `AGENTS.md` potwierdza zgodność z mechanizmem
+- [x] 4.3 Sekwencja z `api/securitycheck-portal.http` przechodzi na prawdziwym AD
+- [x] 4.4 Przegląd `infrastructure.md` i `AGENTS.md` potwierdza zgodność z mechanizmem

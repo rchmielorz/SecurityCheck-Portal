@@ -84,7 +84,7 @@ Fundamenty poniżej zakładają ten stan i nie tworzą ponownie tego, co istniej
 - **Parallel with:** —
 - **Blockers:** —
 - **Unknowns:**
-  - Metoda logowania: firmowe SSO (rekomendacja `infrastructure.md`) czy email/hasło (PRD dopuszcza oba)? — Owner: user. Block: no (domyślnie SSO).
+  - Metoda logowania: firmowe SSO (rekomendacja `infrastructure.md`) czy email/hasło (PRD dopuszcza oba)? — Owner: user. Block: no (domyślnie SSO). — rozstrzygnięte 2026-09-27: login + hasło przez LDAPS, JWT w ciasteczku HttpOnly (plan `authenticated-app-shell`).
 - **Risk:** Sequenced first, bo NFR zakazuje publicznej strony — każda funkcja zbudowana przed bramką musiałaby być potem zabezpieczana wstecz. Zakres ograniczony do bramki i powłoki; żadnych ekranów domenowych.
 - **Status:** in-progress
 

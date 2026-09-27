@@ -1,7 +1,7 @@
 ---
 project: securitycheck-portal
 researched_at: 2026-09-23
-updated: 2026-09-26
+updated: 2026-09-27
 recommended_platform: On-prem IIS (Windows Server) + Windows Service worker
 scanner: Trivy (`trivy fs`, JSON output) on a clone checked out at the resolved version
 runner_up: Docker Compose on internal Linux VM
@@ -17,7 +17,7 @@ tech_stack:
 
 **Deploy on the company's existing IIS server (Windows Server): the ASP.NET Core API in an IIS app pool, the scan engine as a separate Windows Service, and the React Router UI as a static SPA served from the same site.**
 
-Two company-policy constraints were treated as hard filters. First, everything must run on company infrastructure. Second, the scanner must clone Git repos that exist only on the internal network. Together they eliminate every cloud PaaS in the default pool. Among the on-prem candidates, IIS scores slightly lower than Docker Compose and Kamal on the raw agent-friendly criteria. It wins after the interview weights are applied: minimizing cost was the top priority, the team already publishes internal tools to IIS, and the project needs single-region, internal-only hosting. It also adds no licensing cost, no new OS to own, and built-in Windows SSO.
+Two company-policy constraints were treated as hard filters. First, everything must run on company infrastructure. Second, the scanner must clone Git repos that exist only on the internal network. Together they eliminate every cloud PaaS in the default pool. Among the on-prem candidates, IIS scores slightly lower than Docker Compose and Kamal on the raw agent-friendly criteria. It wins after the interview weights are applied: minimizing cost was the top priority, the team already publishes internal tools to IIS, and the project needs single-region, internal-only hosting. It also adds no licensing cost and no new OS to own. Users sign in inside the application (login + password checked against Active Directory over LDAPS), so authentication does not depend on the host. This replaced the earlier assumption of IIS-provided single sign-on (decision 2026-09-27, change `authenticated-app-shell`).
 
 Interview answers (2026-09-23):
 - Persistent processes: "Don't know", but `has_background_jobs: true` and minutes-long scans make the answer effectively *yes*.
@@ -95,7 +95,7 @@ Notes per platform:
 
 #### 1. IIS + Windows Service (Recommended)
 
-It costs nothing extra on the existing server, and it matches how the team already ships internal tools. Windows Authentication (Negotiate/Kerberos) is GA and gives company SSO with no identity provider work. Microsoft documents that IIS app pools kill long jobs on recycle (default `shutdownTimeLimit` 90s, 20-min idle timeout, recycle every 1740 min). Its explicit guidance is to host background work outside IIS, which leads to the two-process topology: API in IIS, scanner as a Windows Service under a gMSA or service account. That split also gives FR-005 (scheduled scans) a clean home. The UI moves to React Router SPA mode (`ssr: false`), because Node SSR hosting on IIS is poor: iisnode is unmaintained and HttpPlatformHandler's status is unclear.
+It costs nothing extra on the existing server, and it matches how the team already ships internal tools. Sign-in is handled by the application itself (Active Directory bind over LDAPS, session as a JWT in an HttpOnly cookie), so it needs no identity provider work and does not depend on IIS authentication features. Microsoft documents that IIS app pools kill long jobs on recycle (default `shutdownTimeLimit` 90s, 20-min idle timeout, recycle every 1740 min). Its explicit guidance is to host background work outside IIS, which leads to the two-process topology: API in IIS, scanner as a Windows Service under a gMSA or service account. That split also gives FR-005 (scheduled scans) a clean home. The UI moves to React Router SPA mode (`ssr: false`), because Node SSR hosting on IIS is poor: iisnode is unmaintained and HttpPlatformHandler's status is unclear.
 
 #### 2. Docker Compose on internal Linux VM
 
@@ -125,8 +125,6 @@ The team shipped the portal on the shared IIS server and left the scanner inside
 
 - **MAX_PATH (260 chars).** Deep repos and `node_modules` trees exceed it. Set `git config --system core.longpaths true`, enable Win32 long paths, and keep the scan working directory short (e.g. `D:\scw\<id>`).
 - **Defender on scan folders.** Real-time protection slows clones dramatically and can quarantine files from known-vulnerable packages. A scan-directory exclusion must be agreed with the security team.
-- **Data Protection keys.** Without persisted keys (`PersistKeysToFileSystem` to a folder the app pool can write to), every app-pool recycle invalidates login cookies and logs everyone out.
-- **Windows SSO prerequisites.** Silent sign-in needs the site in the browser's Local Intranet zone. A custom hostname needs an HTTP SPN on the app-pool or service account, or browsers fall back to NTLM or a prompt.
 - **Trivy cache under the service account.** Without an explicit `--cache-dir`, the DB lands in the service profile, or it fails if the profile is missing. Use a fixed folder, e.g. `D:\trivy-cache`, that only the worker account can write.
 - **Dev dependencies are skipped by default.** This matches "what ships to the customer", but it is a product decision. If build-time tooling should count, add `--include-dev-deps`.
 - **Trivy JSON shape.** Each `Results[]` entry is one target (a lock file) with a `Vulnerabilities[]` list of `VulnerabilityID`, `PkgName`, `InstalledVersion` and `Severity`.
@@ -137,7 +135,7 @@ The team shipped the portal on the shared IIS server and left the scanner inside
 
 - **Preview deploys**: none on the platform. Previews run locally (`dotnet run` + `npm run dev`). If needed, add a second IIS site `securitycheck-staging` on another port, deployed from `main` before a manual promote. It is internal-only by network, so no extra access layer is needed.
 - **Secrets**:
-  - Production connection string and git PAT/SSH key live on the server: ACL'd environment variables on the app pool and the service, or `appsettings.Production.json` outside the repo, readable only by the app-pool identity, the service account and admins.
+  - Production connection string, git PAT/SSH key, `Auth:Jwt:SigningKey` (at least 32 bytes) and the company-specific `Auth:Ldap` settings (`Host`, `UpnSuffix`, `SearchBase`, `AllowedGroupDn`) live on the server: ACL'd environment variables on the app pool and the service, or `appsettings.Production.json` outside the repo, readable only by the app-pool identity, the service account and admins.
   - CI-side secrets (runner registration) live in GitHub Secrets.
   - Rotation: an admin updates the value on the server, then runs `Restart-WebAppPool securitycheck` and `Restart-Service SecurityCheck.Worker`.
 - **Rollback**: each deploy goes to `D:\apps\securitycheck\releases\<git-sha>\{api,worker}`.
@@ -166,8 +164,9 @@ The team shipped the portal on the shared IIS server and left the scanner inside
 | Self-hosted runner on shared IIS server breaks other apps | Devil's advocate | M | M | Runner service account can only write `D:\apps\securitycheck` and control its own app pool and service. Production deploy requires GitHub Environment approval. |
 | MAX_PATH failures on deep repos | Unknown unknowns | M | M | `core.longpaths=true`, enable `LongPathsEnabled`, short scan root. |
 | Defender slows scans or quarantines vulnerable-package files | Unknown unknowns | M | M | Scan-directory exclusion approved by the security team. Clean the working dir after each scan. |
-| Users logged out on every recycle | Unknown unknowns | H | L | Persist Data Protection keys to disk (protected with DPAPI). |
-| Windows SSO prompts or NTLM fallback | Unknown unknowns | M | L | Register an HTTP SPN for the site hostname. GPO adds the site to the Local Intranet zone. |
+| LDAPS unreachable or its certificate untrusted, so every login returns 503 | Research finding | M | H | Pre-flight on the server before go-live: TCP 636 to the DC and a trusted internal-CA chain for the name in `Auth:Ldap:Host`. |
+| Password guessing locks out AD accounts | Research finding | M | M | Login is limited to 5 attempts per minute per client IP (429 above that), backed by the AD account lockout policy. |
+| Leaked `Auth:Jwt:SigningKey` lets anyone forge a session | Research finding | L | H | The key lives only on the server, never in the repo or `appsettings*.json`. Rotating it invalidates every session and logs everyone out. |
 | PostgreSQL on Windows unowned (patching, backups) | Devil's advocate | M | H | Named owner. Nightly `pg_dump` via Task Scheduler to a separate share. Test a restore once before go-live. |
 | Trivy JSON output changes between versions and breaks the parser | Unknown unknowns | L | M | Pin the Trivy version, parse `--format json` only, and keep a contract test on sample output. |
 | HttpPlatformHandler / iisnode unsuitable for Node SSR (unmaintained, status unclear, checked 2026-09-23) | Research finding | — | — | Avoided by SPA mode. If SSR is ever needed, move to runner-up (Docker Compose). |
@@ -178,13 +177,14 @@ The team shipped the portal on the shared IIS server and left the scanner inside
 1. **On the server (one-time, admin):**
    - Install the **.NET 10 Hosting Bundle**, then run `iisreset`.
    - Create the app pool: `New-WebAppPool securitycheck`, then set `managedRuntimeVersion ''`, `startMode AlwaysRunning`, `processModel.idleTimeout 00:00:00` and `processModel.loadUserProfile true`.
-   - Create the site with Windows Authentication on and Anonymous off.
+   - Create the site with Anonymous Authentication enabled and Windows Authentication disabled; the application authenticates users itself.
+   - Make sure the server reaches Active Directory over LDAPS (TCP 636) and trusts the internal CA that issued the domain controllers' certificate. `Auth:Ldap:Host` must be a name present in that certificate (DC FQDN or domain name), not an IP address.
    - Install PostgreSQL and create the `securitycheck` database and login.
    - Install git and a pinned Trivy Windows binary. Never use v0.69.4. Verify it with `cosign verify-blob` against the release's sigstore bundle.
    - Create a cache folder (e.g. `D:\trivy-cache`) writable only by the worker account.
    - Allow `mirror.gcr.io` / `ghcr.io` through the proxy for the worker account, or set up an internal DB mirror.
 2. **Split the worker.** Add a `SecurityCheck.Worker` project (Worker Service template) with `Microsoft.Extensions.Hosting.WindowsServices` and `builder.Services.AddWindowsService()`. It shares the EF Core `DbContext` project with the API. Register it once with `New-Service -Name SecurityCheck.Worker -BinaryPathName ...\worker\SecurityCheck.Worker.exe -Credential <gMSA>`.
-3. **Switch the UI to SPA mode.** Set `ssr: false` in `web/react-router.config.ts` and build with `npm run build`. Publish `web/build/client` into the API's `wwwroot`, with `app.UseStaticFiles()` + `app.MapFallbackToFile("index.html")`, so UI and `/api` share one origin and one Windows-auth session.
+3. **Publish the UI as an SPA.** The UI runs in SPA mode (`ssr: false` in `web/react-router.config.ts`). `cd web && npm run build:api` builds it and copies `web/build/client` into the API's `wwwroot`, where `app.UseStaticFiles()` + `app.MapFallbackToFile("index.html")` serve it, so UI and `/api` share one origin and one session cookie.
 4. **Publish.**
    - Build: `dotnet publish api -c Release -o out/api` and `dotnet publish SecurityCheck.Worker -c Release -r win-x64 -o out/worker`.
    - Deploy by running a script from a self-hosted runner on the server that does, in order:
@@ -194,7 +194,7 @@ The team shipped the portal on the shared IIS server and left the scanner inside
      4. Drop `app_offline.htm`, swap the `physicalPath`, remove `app_offline.htm`.
      5. Re-point and `Start-Service`.
 5. **Verify.**
-   - Check the site: `Invoke-WebRequest https://<host>/health -UseDefaultCredentials`.
+   - Check the site: an anonymous `GET https://<host>/api/me` returns 401 (`curl.exe -i https://<host>/api/me`), and `https://<host>/` in a browser shows the login form.
    - Check the worker: `Get-Service SecurityCheck.Worker`.
    - Check the scanner as the worker account: `trivy --cache-dir D:\trivy-cache version --format json` shows the pinned version and a fresh vulnerability DB.
    - Trigger one manual scan against a repo with a known-vulnerable package and confirm it is reported (a guardrail smoke test, not just "200 OK").

@@ -1,7 +1,34 @@
-@securitycheck_portal_HostAddress = http://localhost:5143
+# Smoke test: login -> me -> logout -> me (401).
+# Run the API first: dotnet run --project api --launch-profile http
+#
+# Fill @userName and @password locally before running and never commit them.
+# userName is the bare sAMAccountName (no DOMAIN\ prefix, no @suffix).
+#
+# The session is the sc_auth cookie (HttpOnly, Secure, SameSite=Strict); the requests
+# below rely on the client's cookie jar to resend it. Some REST clients do not resend a
+# Secure cookie over plain http - if "me" returns 401 right after a successful login,
+# run the https profile and set @host = https://localhost:7009.
 
-# Requires a session cookie from POST /api/auth/login; returns 401 without one.
-GET {{securitycheck_portal_HostAddress}}/api/me
+@host = http://localhost:5143
+@userName =
+@password =
+
+### 1. Login - expect 200 with { userName, displayName } and a Set-Cookie: sc_auth
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "userName": "{{userName}}",
+  "password": "{{password}}"
+}
+
+### 2. Current user - expect 200
+GET {{host}}/api/me
 Accept: application/json
 
-###
+### 3. Logout - expect 204 and the cookie cleared
+POST {{host}}/api/auth/logout
+
+### 4. Current user after logout - expect 401
+GET {{host}}/api/me
+Accept: application/json
