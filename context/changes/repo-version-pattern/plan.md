@@ -665,10 +665,10 @@ Pierwsza migracja tworzy trzy puste tabele. Nie ma danych do przenoszenia. Na se
 
 #### Automated
 
-- [x] 5.1 W AGENTS.md nie ma już „planned but not yet installed”
-- [x] 5.2 Build, testy i typecheck przechodzą
+- [x] 5.1 W AGENTS.md nie ma już „planned but not yet installed” — 5d08bde
+- [x] 5.2 Build, testy i typecheck przechodzą — 5d08bde
 
 #### Manual
 
-- [x] 5.3 Przegląd `AGENTS.md` i `infrastructure.md` potwierdza zgodność z tym, co powstało
-- [x] 5.4 Sekwencja z `api/securitycheck-portal.http` przechodzi na prawdziwym serwerze Git
+- [x] 5.3 Przegląd `AGENTS.md` i `infrastructure.md` potwierdza zgodność z tym, co powstało — 5d08bde
+- [x] 5.4 Sekwencja z `api/securitycheck-portal.http` przechodzi na prawdziwym serwerze Git — 5d08bde
