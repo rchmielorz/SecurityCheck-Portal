@@ -113,8 +113,8 @@ Fundamenty poniżej zakładają ten stan i nie tworzą ponownie tego, co istniej
 - **Parallel with:** F-02
 - **Blockers:** —
 - **Unknowns:**
-  - Jak wzorzec mapuje się na repozytorium: tagi (np. `v2.1.7`) czy gałęzie hotfixowe, i czy wybieramy najwyższy pasujący numer? — Owner: user. Block: no (do rozstrzygnięcia w `/10x-plan`).
-  - Jakie poświadczenia portal używa do dostępu do repozytoriów w sieci wewnętrznej? — Owner: team. Block: no.
+  - Jak wzorzec mapuje się na repozytorium: tagi (np. `v2.1.7`) czy gałęzie hotfixowe, i czy wybieramy najwyższy pasujący numer? — Owner: user. Block: no (do rozstrzygnięcia w `/10x-plan`). — rozstrzygnięte 2026-09-28: tagi `X.Y.N` bez prefiksu, najwyższy hotfix numerycznie (plan `repo-version-pattern`).
+  - Jakie poświadczenia portal używa do dostępu do repozytoriów w sieci wewnętrznej? — Owner: team. Block: no. — rozstrzygnięte 2026-09-28: HTTPS + PAT tylko do odczytu do firmowego GitLaba (`gitlab-do.coig.app`, adresy kanoniczne z `.git`), używany przez API i worker (plan `repo-version-pattern`).
 - **Risk:** Wydzielony przed skanem, bo poprawne rozwiązanie wzorca to warunek wiarygodności całego wyniku (Guardrail: „nie na złej wersji/branchu”); widoczne rozwiązanie wzorca pozwala to sprawdzić przed podłączeniem skanera.
 - **Status:** in-progress
 

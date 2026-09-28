@@ -1,7 +1,7 @@
 ---
 project: securitycheck-portal
 researched_at: 2026-09-23
-updated: 2026-09-27
+updated: 2026-09-28
 recommended_platform: On-prem IIS (Windows Server) + Windows Service worker
 scanner: Trivy (`trivy fs`, JSON output) on a clone checked out at the resolved version
 runner_up: Docker Compose on internal Linux VM
@@ -115,7 +115,7 @@ It has the best agent-driven deploy semantics: one command to deploy and one to 
 4. **Shared server blast radius.** A GitHub Actions self-hosted runner with IIS admin rights on a server hosting other internal apps can recycle or break those apps during a deploy.
 5. **PostgreSQL on Windows is unfamiliar.** If the company normally runs SQL Server, installing, patching and backing up Postgres (`pg_dump` schedule, restore test) is new, unowned work.
 6. **Trivy is blind without lock files.** An old customer version with only `.csproj` files (no `packages.lock.json`) or only `package.json` produces zero packages. Trivy reports it as a clean result, not as an error.
-7. **The scanner runs with the worker's privileges.** It runs as the service account, which holds the git credential. A compromised Trivy release, as in March 2026, would leak that credential and read every cloned repo.
+7. **The scanner runs with the worker's privileges.** It runs as the service account, which holds the git credential (a read-only PAT). The API's app-pool identity holds the same PAT, because the API resolves version patterns with `git ls-remote`. A compromised Trivy release, as in March 2026, would leak that credential and read every repo the PAT can reach.
 
 ### Pre-Mortem — How This Could Fail
 
@@ -135,7 +135,7 @@ The team shipped the portal on the shared IIS server and left the scanner inside
 
 - **Preview deploys**: none on the platform. Previews run locally (`dotnet run` + `npm run dev`). If needed, add a second IIS site `securitycheck-staging` on another port, deployed from `main` before a manual promote. It is internal-only by network, so no extra access layer is needed.
 - **Secrets**:
-  - Production connection string, git PAT/SSH key, `Auth:Jwt:SigningKey` (at least 32 bytes) and the company-specific `Auth:Ldap` settings (`Host`, `UpnSuffix`, `SearchBase`, `AllowedGroupDn`) live on the server: ACL'd environment variables on the app pool and the service, or `appsettings.Production.json` outside the repo, readable only by the app-pool identity, the service account and admins.
+  - Production connection string (`ConnectionStrings:Portal`), the read-only git PAT (`Git:Token`, used by the API and the worker) with its host allow-list (`Git:AllowedHosts`, e.g. `gitlab-do.coig.app`), `Auth:Jwt:SigningKey` (at least 32 bytes) and the company-specific `Auth:Ldap` settings (`Host`, `UpnSuffix`, `SearchBase`, `AllowedGroupDn`) live on the server: ACL'd environment variables on the app pool and the service, or `appsettings.Production.json` outside the repo, readable only by the app-pool identity, the service account and admins.
   - CI-side secrets (runner registration) live in GitHub Secrets.
   - Rotation: an admin updates the value on the server, then runs `Restart-WebAppPool securitycheck` and `Restart-Service SecurityCheck.Worker`.
 - **Rollback**: each deploy goes to `D:\apps\securitycheck\releases\<git-sha>\{api,worker}`.
@@ -157,7 +157,7 @@ The team shipped the portal on the shared IIS server and left the scanner inside
 | Scan killed by app-pool recycle and recorded as clean | Pre-mortem | H (if hosted in IIS) | H | Scanner runs only in the Windows Service. Scan status is a state machine (`queued → running → succeeded/failed`), and only `succeeded` shows results. Raise `HostOptions.ShutdownTimeout`. |
 | Trivy DB registry unreachable, so the scan fails or silently uses a stale cached DB | Devil's advocate | M | H | Allow `mirror.gcr.io`/`ghcr.io` through the proxy, or host a DB mirror (`--db-repository`). Store the DB `UpdatedAt` with every scan and mark the scan **failed** when the DB is older than the agreed limit. A non-zero exit or empty/invalid JSON also marks it **failed**. |
 | Repo version has no supported lock file, so zero packages is reported as clean | Devil's advocate | H | H | Before the scan, detect manifests (`*.csproj`, `package.json`) that have no matching lock file. If any are found, or Trivy returns no targets, mark the result **incomplete**, never "no vulnerabilities". |
-| Compromised Trivy release (precedent: v0.69.4, 2026-03-19) steals the git credential | Research finding | L | H | Pin the version, verify with cosign, and upgrade only with human approval. The git credential gets read-only access. Run no Trivy GitHub Action in CI with deploy secrets. |
+| Compromised Trivy release (precedent: v0.69.4, 2026-03-19) steals the git credential, held by both the worker service account and the API app-pool identity | Research finding | L | H | Pin the version, verify with cosign, and upgrade only with human approval. The git credential is a read-only PAT, sent as a header via the environment, never in a URL or argv. Run no Trivy GitHub Action in CI with deploy secrets. |
 | Service identity has no profile, so git credentials, HOME and TEMP fail | Pre-mortem | H | M | Run the worker under a gMSA or dedicated domain account. Set explicit `HOME`/`TEMP` and a git credential via env (`GIT_ASKPASS` / header), or an SSH key in the service profile. |
 | API/worker version skew or non-reversible migration during deploy | Devil's advocate | M | M | Deploy script stops the worker → migrates → swaps API → starts the worker. Migrations are additive only. One release folder serves both processes. |
 | React Router SPA-mode constraints (root-only `loader`, no `action`) | Devil's advocate | H | L | Decide `ssr: false` before building UI routes. Data calls go to same-origin `/api/*`, with the SPA served from ASP.NET Core `wwwroot` or a static IIS app under the same site. |
@@ -195,6 +195,7 @@ The team shipped the portal on the shared IIS server and left the scanner inside
      5. Re-point and `Start-Service`.
 5. **Verify.**
    - Check the site: an anonymous `GET https://<host>/api/me` returns 401 (`curl.exe -i https://<host>/api/me`), and `https://<host>/` in a browser shows the login form.
+   - Check Git access from the API: after login, add a repository (`https://<git host>/<path>.git`) and a version pattern (e.g. `2.1.*`); the pattern shows the resolved tag, not an error.
    - Check the worker: `Get-Service SecurityCheck.Worker`.
    - Check the scanner as the worker account: `trivy --cache-dir D:\trivy-cache version --format json` shows the pinned version and a fresh vulnerability DB.
    - Trigger one manual scan against a repo with a known-vulnerable package and confirm it is reported (a guardrail smoke test, not just "200 OK").

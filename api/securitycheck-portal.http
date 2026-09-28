@@ -1,4 +1,4 @@
-# Smoke test: login -> me -> logout -> me (401).
+# Smoke test: login -> me -> S-01 (repository + version pattern) -> logout -> me (401).
 # Run the API first: dotnet run --project api --launch-profile http
 #
 # Fill @userName and @password locally before running and never commit them.
@@ -8,10 +8,19 @@
 # below rely on the client's cookie jar to resend it. Some REST clients do not resend a
 # Secure cookie over plain http - if "me" returns 401 right after a successful login,
 # run the https profile and set @host = https://localhost:7009.
+#
+# S-01 (requests 3-9) needs the database migrated and Git:* user-secrets set (see AGENTS.md).
+# Fill @repoUrl with an https URL on a host listed in Git:AllowedHosts and @pattern with a
+# pattern like 2.1.* that matches tags in that repository; never commit real values.
+# The repository URL must not be registered yet (otherwise step 3 returns 409).
+# Steps 4-9 read the IDs from the responses of the named requests addRepo and addPattern
+# (Visual Studio, Rider and VS Code REST Client support this syntax).
 
 @host = http://localhost:5143
 @userName =
 @password =
+@repoUrl =
+@pattern =
 
 ### 1. Login - expect 200 with { userName, displayName } and a Set-Cookie: sc_auth
 POST {{host}}/api/auth/login
@@ -26,9 +35,43 @@ Content-Type: application/json
 GET {{host}}/api/me
 Accept: application/json
 
-### 3. Logout - expect 204 and the cookie cleared
+### 3. Add repository - expect 201 with the canonical URL (https://<host>/<path>.git, lower case)
+# @name addRepo
+POST {{host}}/api/repos
+Content-Type: application/json
+
+{
+  "url": "{{repoUrl}}"
+}
+
+### 4. Add version pattern - expect 201 with lastResolution.state Resolved and the tag
+# @name addPattern
+POST {{host}}/api/repos/{{addRepo.response.body.$.id}}/patterns
+Content-Type: application/json
+
+{
+  "pattern": "{{pattern}}"
+}
+
+### 5. Resolve again - expect 200 with the current tag and commit
+POST {{host}}/api/patterns/{{addPattern.response.body.$.id}}/resolve
+
+### 6. Deactivate - expect 200 with isActive false
+POST {{host}}/api/patterns/{{addPattern.response.body.$.id}}/deactivate
+
+### 7. Resolve an inactive pattern - expect 409
+POST {{host}}/api/patterns/{{addPattern.response.body.$.id}}/resolve
+
+### 8. Activate - expect 200 with isActive true
+POST {{host}}/api/patterns/{{addPattern.response.body.$.id}}/activate
+
+### 9. Change log - expect 200, newest first: PatternActivated, PatternDeactivated, PatternAdded, RepositoryAdded
+GET {{host}}/api/repos/{{addRepo.response.body.$.id}}/events
+Accept: application/json
+
+### 10. Logout - expect 204 and the cookie cleared
 POST {{host}}/api/auth/logout
 
-### 4. Current user after logout - expect 401
+### 11. Current user after logout - expect 401
 GET {{host}}/api/me
 Accept: application/json

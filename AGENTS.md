@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-SecurityCheck Portal is an internal tool that scans dependencies of customer-deployed repository versions for known vulnerabilities. Stack: ASP.NET Core minimal API (.NET 10) in `api/`, React Router 8 + Tailwind 4 UI in `web/`; the repo root holds no project. PostgreSQL via EF Core/Npgsql is planned but not yet installed.
+SecurityCheck Portal is an internal tool that scans dependencies of customer-deployed repository versions for known vulnerabilities. Stack: ASP.NET Core minimal API (.NET 10) in `api/`, shared data and Git code in `core/`, React Router 8 + Tailwind 4 UI in `web/`; the repo root holds no project. Data lives in PostgreSQL via EF Core 10/Npgsql.
 
 ## Hard Rules
 
@@ -14,8 +14,9 @@ SecurityCheck Portal is an internal tool that scans dependencies of customer-dep
 ## Project Structure
 
 - `api/` — the API: `Program.cs`, `securitycheck-portal.csproj`, `appsettings*.json`, `Properties/launchSettings.json`, `securitycheck-portal.http` (login → `me` → logout smoke test), `Auth/` (LDAPS login, JWT cookie). Root namespace: `securitycheck_portal`.
+- `core/` — `securitycheck-portal.Core` (namespace `securitycheck_portal.Core`), referenced by the API and meant to be shared with the planned scan worker: `Data/` (`PortalDbContext`, entities, migrations in `Data/Migrations`) and `Git/` (repository URL validation, `X.Y.*` pattern resolution against tags from `git ls-remote`). `dotnet build api` builds it too.
 - New .NET projects (the planned scan worker, `*.Tests`) get their own top-level folder next to `api/`.
-- `web/app/` — UI. Register every route in `web/app/routes.ts`.
+- `web/app/` — UI. Register every route in `web/app/routes.ts` (`/` repository list + add, `/repos/:repoId` details).
 - `context/foundation/` — PRD, tech stack, infrastructure, shape notes, roadmap. Read @context/foundation/prd.md before implementing a feature (FR-001…FR-008); pick the next work item from @context/foundation/roadmap.md.
 - `web/.agents/skills/react-router/` — React Router reference skill. Before using a React Router API that isn't already used in `web/app/`, read @web/.agents/skills/react-router/references/framework-mode.md.
 
@@ -25,13 +26,16 @@ SecurityCheck Portal is an internal tool that scans dependencies of customer-dep
 - Dev loop: run the API as above plus `cd web && npm run dev` — UI on `http://localhost:5173`, with `/api` proxied to `:5143` (@web/vite.config.ts).
 - `cd web && npm run build:api` — build the SPA and copy `web/build/client` into `api/wwwroot` (gitignored); then the API alone serves UI and `/api` on one origin.
 - Auth config: set `Auth:*` with `dotnet user-secrets set <key> <value>` in `api/`: `Auth:Jwt:SigningKey` (≥ 32 bytes) and `Auth:Ldap:Host`, `Auth:Ldap:UpnSuffix`, `Auth:Ldap:SearchBase`, `Auth:Ldap:AllowedGroupDn` (@api/Auth/AuthOptions.cs). Use the full `Auth:Ldap:` prefix. Options are validated on start; a missing value stops the app with `OptionsValidationException`.
-- `dotnet build api` — compile the API. Plain `dotnet build` at the root fails, because there is no project there.
+- Git config (user-secrets in `api/`, validated on start): `Git:Token` (read-only PAT; never in `appsettings*.json` or a URL) and `Git:AllowedHosts:0` (e.g. `gitlab-do.coig.app`); optional `Git:UserName` (default `pat`), `Git:ExecutablePath` (default `git`; absolute path to `git.exe` on the server), `Git:TimeoutSeconds` (default 30). Repository URLs are stored as `https://<host>/<path>.git`, lower case (@core/Git/RepositoryUrl.cs).
+- Database: set `ConnectionStrings:Portal` with `dotnet user-secrets set` in `api/`; start fails without it. The API does not migrate on start: run `dotnet tool restore` once (dotnet-ef pinned in @.config/dotnet-tools.json), then `dotnet ef database update --project core --startup-project api`. Add a migration with `dotnet ef migrations add <Name> --project core --startup-project api --output-dir Data/Migrations`.
+- `dotnet build api` — compile the API (and `core/`). Plain `dotnet build` at the root fails, because there is no project there.
 - `cd web && npm run typecheck` — run after adding or renaming routes.
 - Other UI scripts: see @web/package.json (run from `web/`).
 
 ## Testing
 
-- `dotnet test api.Tests` — run the API tests (xUnit, `api.Tests/securitycheck-portal.Tests.csproj`). They host the API in-memory with a fake LDAP authenticator (`api.Tests/PortalFactory.cs`) and need no network or AD.
+- `dotnet test api.Tests` — run the API tests (xUnit, `api.Tests/securitycheck-portal.Tests.csproj`). They host the API in-memory with a fake LDAP authenticator and a fake Git tag source (`api.Tests/PortalFactory.cs`), so they need no network, AD or Git server.
+- Database tests (`api.Tests/DatabasePortalFactory.cs`) start PostgreSQL 17 through Testcontainers and need a running Docker (e.g. Rancher Desktop). Without Docker they are reported as skipped ("Docker niedostępny — testy bazy pominięte"), not failed.
 - Every new anonymous endpoint must be added on purpose to the allow-list in `api.Tests/NoPublicEndpointsTests.cs`; otherwise that test fails.
 - No UI test runner exists yet.
 
