@@ -628,38 +628,38 @@ Pierwsza migracja tworzy trzy puste tabele. Nie ma danych do przenoszenia. Na se
 
 #### Manual
 
-- [ ] 2.5 Prawdziwe repozytorium firmowe rozwiązuje się na tag i commit zgodne z ręcznym `git ls-remote --tags`
+- [x] 2.5 Prawdziwe repozytorium firmowe rozwiązuje się na tag i commit zgodne z ręcznym `git ls-remote --tags`
 - [x] 2.6 Serwer Git firmy akceptuje kanoniczny URL bez `.git` i nagłówek Basic z PAT — 5f5263b
 
 ### Phase 3: Endpointy API
 
 #### Automated
 
-- [x] 3.1 Kompilacja bez ostrzeżeń: `dotnet build api`
-- [x] 3.2 Wszystkie testy przechodzą przy działającym Dockerze: `dotnet test api.Tests`
-- [x] 3.3 Test ochronny nie wymaga zmiany listy wyjątków
+- [x] 3.1 Kompilacja bez ostrzeżeń: `dotnet build api` — 8792bb9
+- [x] 3.2 Wszystkie testy przechodzą przy działającym Dockerze: `dotnet test api.Tests` — 8792bb9
+- [x] 3.3 Test ochronny nie wymaga zmiany listy wyjątków — 8792bb9
 
 #### Manual
 
-- [ ] 3.4 Sekwencja z `api/securitycheck-portal.http` daje oczekiwane kody i poprawny tag i commit
-- [ ] 3.5 Bez sieci do serwera Git `resolve` zwraca stan `Error` w czasie limitu, a API nie wisi
+- [x] 3.4 Sekwencja z `api/securitycheck-portal.http` daje oczekiwane kody i poprawny tag i commit
+- [x] 3.5 Bez sieci do serwera Git `resolve` zwraca stan `Error` w czasie limitu, a API nie wisi
 
 ### Phase 4: Ekrany SPA
 
 #### Automated
 
-- [ ] 4.1 Typy i trasy są poprawne: `cd web && npm run typecheck`
-- [ ] 4.2 Build SPA z kopiowaniem przechodzi: `cd web && npm run build:api`
-- [ ] 4.3 API nadal się kompiluje i testy przechodzą
+- [x] 4.1 Typy i trasy są poprawne: `cd web && npm run typecheck`
+- [x] 4.2 Build SPA z kopiowaniem przechodzi: `cd web && npm run build:api`
+- [x] 4.3 API nadal się kompiluje i testy przechodzą
 
 #### Manual
 
-- [ ] 4.4 Dodanie repozytorium firmowego i wzorca pokazuje tag i commit zgodne z `git ls-remote --tags`
-- [ ] 4.5 Duplikat URL i zły wzorzec pokazują właściwe polskie komunikaty
-- [ ] 4.6 Dezaktywacja, „Pokaż nieaktywne”, ponowne dodanie i aktywacja działają zgodnie z regułami
-- [ ] 4.7 Usunięcie repozytorium z wzorcami jest zablokowane; po usunięciu wzorców działa
-- [ ] 4.8 Historia zmian pokazuje wszystkie wykonane operacje z loginem autora
-- [ ] 4.9 `/repos/999999` pokazuje „Nie znaleziono strony”
+- [x] 4.4 Dodanie repozytorium firmowego i wzorca pokazuje tag i commit zgodne z `git ls-remote --tags`
+- [x] 4.5 Duplikat URL i zły wzorzec pokazują właściwe polskie komunikaty
+- [x] 4.6 Dezaktywacja, „Pokaż nieaktywne”, ponowne dodanie i aktywacja działają zgodnie z regułami
+- [x] 4.7 Usunięcie repozytorium z wzorcami jest zablokowane; po usunięciu wzorców działa
+- [x] 4.8 Historia zmian pokazuje wszystkie wykonane operacje z loginem autora
+- [x] 4.9 `/repos/999999` pokazuje „Nie znaleziono strony”
 
 ### Phase 5: Dokumentacja
 
