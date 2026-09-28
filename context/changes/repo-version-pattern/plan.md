@@ -621,23 +621,23 @@ Pierwsza migracja tworzy trzy puste tabele. Nie ma danych do przenoszenia. Na se
 
 #### Automated
 
-- [x] 2.1 Kompilacja bez ostrzeżeń: `dotnet build api`
-- [x] 2.2 Testy jednostkowe URL, wzorca, parsera i rozwiązywacza przechodzą
-- [x] 2.3 Wszystkie testy przechodzą: `dotnet test api.Tests`
-- [x] 2.4 Token nie trafia do argumentów procesu
+- [x] 2.1 Kompilacja bez ostrzeżeń: `dotnet build api` — 5f5263b
+- [x] 2.2 Testy jednostkowe URL, wzorca, parsera i rozwiązywacza przechodzą — 5f5263b
+- [x] 2.3 Wszystkie testy przechodzą: `dotnet test api.Tests` — 5f5263b
+- [x] 2.4 Token nie trafia do argumentów procesu — 5f5263b
 
 #### Manual
 
 - [ ] 2.5 Prawdziwe repozytorium firmowe rozwiązuje się na tag i commit zgodne z ręcznym `git ls-remote --tags`
-- [x] 2.6 Serwer Git firmy akceptuje kanoniczny URL bez `.git` i nagłówek Basic z PAT
+- [x] 2.6 Serwer Git firmy akceptuje kanoniczny URL bez `.git` i nagłówek Basic z PAT — 5f5263b
 
 ### Phase 3: Endpointy API
 
 #### Automated
 
-- [ ] 3.1 Kompilacja bez ostrzeżeń: `dotnet build api`
-- [ ] 3.2 Wszystkie testy przechodzą przy działającym Dockerze: `dotnet test api.Tests`
-- [ ] 3.3 Test ochronny nie wymaga zmiany listy wyjątków
+- [x] 3.1 Kompilacja bez ostrzeżeń: `dotnet build api`
+- [x] 3.2 Wszystkie testy przechodzą przy działającym Dockerze: `dotnet test api.Tests`
+- [x] 3.3 Test ochronny nie wymaga zmiany listy wyjątków
 
 #### Manual
 

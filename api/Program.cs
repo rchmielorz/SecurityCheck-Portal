@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using securitycheck_portal.Auth;
 using securitycheck_portal.Core.Data;
 using securitycheck_portal.Core.Git;
+using securitycheck_portal.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -138,6 +139,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapAuthEndpoints();
+app.MapRepositoryEndpoints();
 
 // Unknown /api routes must not fall through to index.html. Anonymous callers get 401 from the
 // fallback policy; authenticated ones get 404.
