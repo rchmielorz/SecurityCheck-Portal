@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using securitycheck_portal.Auth;
 using securitycheck_portal.Core.Data;
+using securitycheck_portal.Core.Git;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +27,9 @@ builder.Services.AddOptions<JwtOptions>()
 
 // ConnectionStrings:Portal is validated on start as well; migrations are applied by dotnet ef, not here.
 builder.Services.AddPortalData();
+
+// Git:Token and Git:AllowedHosts are validated on start; the token comes from user-secrets or the environment.
+builder.Services.AddGitResolution();
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<JwtIssuer>();

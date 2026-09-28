@@ -8,12 +8,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using securitycheck_portal.Auth;
+using securitycheck_portal.Core.Git;
 
 namespace securitycheck_portal.Tests;
 
 /// <summary>
-/// Hosts the API in the <c>Testing</c> environment with fake configuration, a fake directory
-/// and a temporary web root that contains <c>index.html</c>. Nothing touches the network or AD, and
+/// Hosts the API in the <c>Testing</c> environment with fake configuration, a fake directory,
+/// a fake Git server and a temporary web root that contains <c>index.html</c>. Nothing touches the network or AD, and
 /// the connection string is never opened; tests that need a database use <see cref="DatabasePortalFactory"/>.
 /// </summary>
 public class PortalFactory : WebApplicationFactory<Program>
@@ -42,6 +43,8 @@ public class PortalFactory : WebApplicationFactory<Program>
     public string SigningKey { get; }
 
     public FakeLdapAuthenticator Ldap { get; } = new();
+
+    public FakeGitTagSource Git { get; } = new();
 
     /// <summary>
     /// Creates a client on <c>https://localhost</c> (so the <c>Secure</c> cookie is sent back)
@@ -87,6 +90,10 @@ public class PortalFactory : WebApplicationFactory<Program>
                 ["Auth:Ldap:ConnectTimeoutSeconds"] = "1",
                 // Satisfies start-up validation; registering the DbContext does not open a connection.
                 ["ConnectionStrings:Portal"] = "Host=db.invalid;Database=securitycheck_portal_tests",
+                // Satisfies start-up validation; git is never started (see FakeGitTagSource).
+                ["Git:AllowedHosts:0"] = FakeGitTagSource.Host,
+                ["Git:Token"] = "fake-token",
+                ["Git:TimeoutSeconds"] = "5",
             });
         });
 
@@ -94,6 +101,8 @@ public class PortalFactory : WebApplicationFactory<Program>
         {
             services.RemoveAll<ILdapAuthenticator>();
             services.AddSingleton<ILdapAuthenticator>(Ldap);
+            services.RemoveAll<IGitTagSource>();
+            services.AddSingleton<IGitTagSource>(Git);
             services.AddSingleton<IStartupFilter, RemoteIpStartupFilter>();
         });
     }
@@ -160,6 +169,54 @@ public sealed class FakeLdapAuthenticator : ILdapAuthenticator
             "alice" => new LdapAuthResult.Success("alice", AliceDisplayName),
             "bob" => new LdapAuthResult.NotInGroup(),
             _ => new LdapAuthResult.InvalidCredentials(),
+        };
+
+        return Task.FromResult(result);
+    }
+}
+
+/// <summary>
+/// Git server stand-in keyed by the last path segment (case-insensitive): <c>down</c> fails,
+/// <c>slow</c> times out, <c>empty</c> has no tags, anything else (e.g. <c>app</c>) has tags
+/// <c>2.1.9</c>, <c>2.1.10</c> (annotated) and a few that no <c>2.1.*</c> pattern may pick.
+/// </summary>
+public sealed class FakeGitTagSource : IGitTagSource
+{
+    public const string Host = "git.internal";
+    public const string AppUrl = $"https://{Host}/team/app.git";
+    public const string DownUrl = $"https://{Host}/team/down.git";
+    public const string SlowUrl = $"https://{Host}/team/slow.git";
+    public const string EmptyUrl = $"https://{Host}/team/empty.git";
+
+    public const string Commit219 = "1111111111111111111111111111111111111111";
+
+    /// <summary>Commit of <c>2.1.10</c>; the annotated tag object itself has a different SHA.</summary>
+    public const string Commit2110 = "2222222222222222222222222222222222222222";
+
+    public const string AppOutput =
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\trefs/tags/2.0.3\n" +
+        Commit219 + "\trefs/tags/2.1.9\n" +
+        "3333333333333333333333333333333333333333\trefs/tags/2.1.10\n" +
+        Commit2110 + "\trefs/tags/2.1.10^{}\n" +
+        "4444444444444444444444444444444444444444\trefs/tags/2.1.11-rc1\n" +
+        "5555555555555555555555555555555555555555\trefs/tags/v2.1.12\n";
+
+    private int _callCount;
+
+    public int CallCount => Volatile.Read(ref _callCount);
+
+    public Task<GitTagListing> ListTagsAsync(string canonicalUrl, CancellationToken cancellationToken)
+    {
+        Interlocked.Increment(ref _callCount);
+
+        var repository = Path.GetFileNameWithoutExtension(canonicalUrl[(canonicalUrl.LastIndexOf('/') + 1)..])
+            .ToLowerInvariant();
+        GitTagListing result = repository switch
+        {
+            "down" => new GitTagListing.Failure(GitErrorKind.Failed, 128),
+            "slow" => new GitTagListing.Failure(GitErrorKind.Timeout, null),
+            "empty" => new GitTagListing.Success(""),
+            _ => new GitTagListing.Success(AppOutput),
         };
 
         return Task.FromResult(result);

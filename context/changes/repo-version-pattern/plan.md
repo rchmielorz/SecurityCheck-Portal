@@ -607,29 +607,29 @@ Pierwsza migracja tworzy trzy puste tabele. Nie ma danych do przenoszenia. Na se
 
 #### Automated
 
-- [x] 1.1 API i `core` kompilują się bez ostrzeżeń: `dotnet build api`
-- [x] 1.2 Model nie ma zmian bez migracji: `dotnet ef migrations has-pending-model-changes`
-- [x] 1.3 Wszystkie testy przechodzą przy działającym Dockerze: `dotnet test api.Tests`
-- [x] 1.4 Przy wyłączonym Dockerze testy F-01 przechodzą, a testy bazy są pominięte
+- [x] 1.1 API i `core` kompilują się bez ostrzeżeń: `dotnet build api` — d988216
+- [x] 1.2 Model nie ma zmian bez migracji: `dotnet ef migrations has-pending-model-changes` — d988216
+- [x] 1.3 Wszystkie testy przechodzą przy działającym Dockerze: `dotnet test api.Tests` — d988216
+- [x] 1.4 Przy wyłączonym Dockerze testy F-01 przechodzą, a testy bazy są pominięte — d988216
 
 #### Manual
 
-- [x] 1.5 Bez `ConnectionStrings:Portal` API odmawia startu z czytelnym błędem walidacji
-- [x] 1.6 `dotnet ef database update` tworzy tabele w lokalnym PostgreSQL
+- [x] 1.5 Bez `ConnectionStrings:Portal` API odmawia startu z czytelnym błędem walidacji — d988216
+- [x] 1.6 `dotnet ef database update` tworzy tabele w lokalnym PostgreSQL — d988216
 
 ### Phase 2: Rozwiązywanie wzorca
 
 #### Automated
 
-- [ ] 2.1 Kompilacja bez ostrzeżeń: `dotnet build api`
-- [ ] 2.2 Testy jednostkowe URL, wzorca, parsera i rozwiązywacza przechodzą
-- [ ] 2.3 Wszystkie testy przechodzą: `dotnet test api.Tests`
-- [ ] 2.4 Token nie trafia do argumentów procesu
+- [x] 2.1 Kompilacja bez ostrzeżeń: `dotnet build api`
+- [x] 2.2 Testy jednostkowe URL, wzorca, parsera i rozwiązywacza przechodzą
+- [x] 2.3 Wszystkie testy przechodzą: `dotnet test api.Tests`
+- [x] 2.4 Token nie trafia do argumentów procesu
 
 #### Manual
 
 - [ ] 2.5 Prawdziwe repozytorium firmowe rozwiązuje się na tag i commit zgodne z ręcznym `git ls-remote --tags`
-- [ ] 2.6 Serwer Git firmy akceptuje kanoniczny URL bez `.git` i nagłówek Basic z PAT
+- [x] 2.6 Serwer Git firmy akceptuje kanoniczny URL bez `.git` i nagłówek Basic z PAT
 
 ### Phase 3: Endpointy API
 
