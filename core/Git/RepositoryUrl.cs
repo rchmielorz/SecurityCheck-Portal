@@ -90,7 +90,9 @@ public static partial class RepositoryUrl
         }
 
         var candidate = $"{Prefix}{host}{path}{GitSuffix}";
-        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri)
+        // Checked again after ".git" is appended: the stored URL must fit the column.
+        if (candidate.Length > Repository.UrlMaxLength
+            || !Uri.TryCreate(candidate, UriKind.Absolute, out var uri)
             || !string.Equals(uri.AbsoluteUri, candidate, StringComparison.Ordinal))
         {
             return false;

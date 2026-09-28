@@ -1,3 +1,4 @@
+using securitycheck_portal.Core.Data;
 using securitycheck_portal.Core.Git;
 
 namespace securitycheck_portal.Tests.Git;
@@ -62,5 +63,20 @@ public sealed class RepositoryUrlTests
     {
         Assert.False(RepositoryUrl.TryNormalize(input, AllowedHosts, out var canonical));
         Assert.Null(canonical);
+    }
+
+    [Fact]
+    public void TryNormalize_rejects_urls_whose_canonical_form_exceeds_the_column_length()
+    {
+        const string prefix = "https://git.internal/";
+        var fits = prefix + new string('a', Repository.UrlMaxLength - prefix.Length - ".git".Length);
+        var tooLong = fits + "a";
+
+        Assert.True(RepositoryUrl.TryNormalize(fits, AllowedHosts, out var canonical));
+        Assert.Equal(Repository.UrlMaxLength, canonical.Length);
+
+        // Within the input limit, but ".git" pushes the canonical form past it.
+        Assert.True(tooLong.Length <= Repository.UrlMaxLength);
+        Assert.False(RepositoryUrl.TryNormalize(tooLong, AllowedHosts, out _));
     }
 }

@@ -101,6 +101,9 @@ public sealed class GitCliTagSource(IOptions<GitOptions> options, ILogger<GitCli
         [
             "credential.helper=",
             "http.followRedirects=false",
+            // Pinned: the ignored system/global config can no longer turn verification off,
+            // but an explicit value keeps the PAT header off unverified TLS by construction.
+            "http.sslVerify=true",
             "http.lowSpeedLimit=1000",
             "http.lowSpeedTime=20",
         ];
@@ -124,6 +127,15 @@ public sealed class GitCliTagSource(IOptions<GitOptions> options, ILogger<GitCli
         }
 
         var environment = startInfo.Environment;
+        // Inherited GIT_* variables (GIT_SSL_NO_VERIFY, GIT_CONFIG_PARAMETERS, …) and the system and
+        // global gitconfig (sslVerify, url.*.insteadOf, proxies) would otherwise still apply.
+        foreach (var key in environment.Keys.Where(k => k.StartsWith("GIT_", StringComparison.OrdinalIgnoreCase)).ToList())
+        {
+            environment.Remove(key);
+        }
+
+        environment["GIT_CONFIG_NOSYSTEM"] = "1";
+        environment["GIT_CONFIG_GLOBAL"] = "/dev/null"; // Git for Windows maps /dev/null to NUL.
         environment["GIT_TERMINAL_PROMPT"] = "0";
         environment["GCM_INTERACTIVE"] = "false";
         environment["GIT_ALLOW_PROTOCOL"] = "https";

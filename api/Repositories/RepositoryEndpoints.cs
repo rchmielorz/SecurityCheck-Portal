@@ -225,6 +225,12 @@ public static class RepositoryEndpoints
                 ?? Results.Conflict(new PatternConflict(PatternConflict.Exists));
         }
 
+        if (outcome == SaveOutcome.ForeignKeyViolation)
+        {
+            // The repository was deleted by a concurrent request after it was read.
+            return Results.NotFound();
+        }
+
         if (outcome != SaveOutcome.Saved)
         {
             return ToResult(outcome);

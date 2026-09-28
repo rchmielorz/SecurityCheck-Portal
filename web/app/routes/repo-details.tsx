@@ -18,6 +18,7 @@ const INVALID_PATTERN = "Wzorzec musi mieć postać X.Y.*, np. 2.1.*.";
 const PATTERN_EXISTS = "Ten wzorzec już istnieje.";
 const PATTERN_INACTIVE = "Ten wzorzec istnieje jako nieaktywny — pokaż nieaktywne i aktywuj go.";
 const REPO_HAS_PATTERNS = "Najpierw usuń wszystkie wzorce tego repozytorium.";
+const RESOLVE_INACTIVE = "Wzorzec jest nieaktywny — aktywuj go, aby sprawdzić.";
 
 const SHOW_INACTIVE_PARAM = "nieaktywne";
 
@@ -75,6 +76,7 @@ async function errorMessage(intent: Intent, response: Response): Promise<string>
     }
   }
   if (intent === "deleteRepo" && response.status === 409) return REPO_HAS_PATTERNS;
+  if (intent === "resolve" && response.status === 409) return RESOLVE_INACTIVE;
   return UNEXPECTED_ERROR;
 }
 

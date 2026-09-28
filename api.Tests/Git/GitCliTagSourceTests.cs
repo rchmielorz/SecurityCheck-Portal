@@ -42,6 +42,7 @@ public sealed class GitCliTagSourceTests
             [
                 "-c", "credential.helper=",
                 "-c", "http.followRedirects=false",
+                "-c", "http.sslVerify=true",
                 "-c", "http.lowSpeedLimit=1000",
                 "-c", "http.lowSpeedTime=20",
                 "-c", "http.sslBackend=schannel",
@@ -66,6 +67,24 @@ public sealed class GitCliTagSourceTests
         Assert.Equal("0", environment["GIT_TERMINAL_PROMPT"]);
         Assert.Equal("false", environment["GCM_INTERACTIVE"]);
         Assert.Equal("https", environment["GIT_ALLOW_PROTOCOL"]);
+    }
+
+    [Fact]
+    public void Inherited_git_settings_and_system_and_global_config_are_ignored()
+    {
+        Environment.SetEnvironmentVariable("GIT_SSL_NO_VERIFY", "1");
+        try
+        {
+            var environment = GitCliTagSource.CreateStartInfo(Settings, Url, isWindows: true).Environment;
+
+            Assert.False(environment.ContainsKey("GIT_SSL_NO_VERIFY"));
+            Assert.Equal("1", environment["GIT_CONFIG_NOSYSTEM"]);
+            Assert.Equal("/dev/null", environment["GIT_CONFIG_GLOBAL"]);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("GIT_SSL_NO_VERIFY", null);
+        }
     }
 
     [Fact]
