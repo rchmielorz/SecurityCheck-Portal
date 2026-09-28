@@ -607,15 +607,15 @@ Pierwsza migracja tworzy trzy puste tabele. Nie ma danych do przenoszenia. Na se
 
 #### Automated
 
-- [ ] 1.1 API i `core` kompilują się bez ostrzeżeń: `dotnet build api`
-- [ ] 1.2 Model nie ma zmian bez migracji: `dotnet ef migrations has-pending-model-changes`
-- [ ] 1.3 Wszystkie testy przechodzą przy działającym Dockerze: `dotnet test api.Tests`
-- [ ] 1.4 Przy wyłączonym Dockerze testy F-01 przechodzą, a testy bazy są pominięte
+- [x] 1.1 API i `core` kompilują się bez ostrzeżeń: `dotnet build api`
+- [x] 1.2 Model nie ma zmian bez migracji: `dotnet ef migrations has-pending-model-changes`
+- [x] 1.3 Wszystkie testy przechodzą przy działającym Dockerze: `dotnet test api.Tests`
+- [x] 1.4 Przy wyłączonym Dockerze testy F-01 przechodzą, a testy bazy są pominięte
 
 #### Manual
 
-- [ ] 1.5 Bez `ConnectionStrings:Portal` API odmawia startu z czytelnym błędem walidacji
-- [ ] 1.6 `dotnet ef database update` tworzy tabele w lokalnym PostgreSQL
+- [x] 1.5 Bez `ConnectionStrings:Portal` API odmawia startu z czytelnym błędem walidacji
+- [x] 1.6 `dotnet ef database update` tworzy tabele w lokalnym PostgreSQL
 
 ### Phase 2: Rozwiązywanie wzorca
 

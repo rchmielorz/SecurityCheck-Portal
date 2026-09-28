@@ -44,7 +44,7 @@ Zespół maintenance nie sprawdza regularnie podatności w bibliotekach starszyc
 | ---- | ----- | ---------------------- | ------------------------------------------------------------------------------------ | ------------- | --------------------------------- | -------- |
 | F-01 | [#1](https://github.com/rchmielorz/SecurityCheck-Portal/issues/1) | authenticated-app-shell | (foundation) każda strona i endpoint wymagają zalogowania; UI i API działają pod jednym originem | —             | NFR, Access Control, FR-001       | done |
 | F-02 | [#2](https://github.com/rchmielorz/SecurityCheck-Portal/issues/2) | deploy-skeleton        | (foundation) merge do `main` buduje, sprawdza i wdraża portal na serwer docelowy     | F-01, przygotowany serwer | NFR, Access Control               | proposed |
-| S-01 | [#3](https://github.com/rchmielorz/SecurityCheck-Portal/issues/3) | repo-version-pattern   | zalogować się, dodać repozytorium i wzorzec wersji oraz zobaczyć, na jaką wersję wzorzec się rozwiązuje | F-01          | FR-001, FR-002, FR-003            | planning |
+| S-01 | [#3](https://github.com/rchmielorz/SecurityCheck-Portal/issues/3) | repo-version-pattern   | zalogować się, dodać repozytorium i wzorzec wersji oraz zobaczyć, na jaką wersję wzorzec się rozwiązuje | F-01          | FR-001, FR-002, FR-003            | in-progress |
 | S-02 | [#4](https://github.com/rchmielorz/SecurityCheck-Portal/issues/4) | manual-version-scan    | ręcznie uruchomić skan wersji i zobaczyć podatności posortowane wg istotności albo jawne „brak wyników” | S-01          | US-01, FR-004, FR-006             | proposed |
 | S-03 | [#5](https://github.com/rchmielorz/SecurityCheck-Portal/issues/5) | scan-history           | przejrzeć historię poprzednich skanów danej wersji i trend liczby/poziomu podatności | S-02          | FR-007                            | proposed |
 | S-04 | [#6](https://github.com/rchmielorz/SecurityCheck-Portal/issues/6) | accepted-risk-triage   | oznaczyć podatność jako zaakceptowane ryzyko z komentarzem i odfiltrować takie pozycje w kolejnych skanach | S-02          | FR-008, FR-006, Business Logic    | proposed |
@@ -116,7 +116,7 @@ Fundamenty poniżej zakładają ten stan i nie tworzą ponownie tego, co istniej
   - Jak wzorzec mapuje się na repozytorium: tagi (np. `v2.1.7`) czy gałęzie hotfixowe, i czy wybieramy najwyższy pasujący numer? — Owner: user. Block: no (do rozstrzygnięcia w `/10x-plan`).
   - Jakie poświadczenia portal używa do dostępu do repozytoriów w sieci wewnętrznej? — Owner: team. Block: no.
 - **Risk:** Wydzielony przed skanem, bo poprawne rozwiązanie wzorca to warunek wiarygodności całego wyniku (Guardrail: „nie na złej wersji/branchu”); widoczne rozwiązanie wzorca pozwala to sprawdzić przed podłączeniem skanera.
-- **Status:** planning
+- **Status:** in-progress
 
 ### S-02: Ręczny skan wersji i lista podatności
 

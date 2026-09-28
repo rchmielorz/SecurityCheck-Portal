@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using securitycheck_portal.Auth;
+using securitycheck_portal.Core.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +23,9 @@ builder.Services.AddOptions<JwtOptions>()
     .Validate(o => string.IsNullOrEmpty(o.SigningKey) || o.HasStrongSigningKey(),
         $"Auth:Jwt:SigningKey must be at least {JwtOptions.MinSigningKeyBytes} bytes (HS256).")
     .ValidateOnStart();
+
+// ConnectionStrings:Portal is validated on start as well; migrations are applied by dotnet ef, not here.
+builder.Services.AddPortalData();
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<JwtIssuer>();

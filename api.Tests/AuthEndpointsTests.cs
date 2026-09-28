@@ -16,7 +16,7 @@ public sealed class AuthEndpointsTests(PortalFactory factory) : IClassFixture<Po
     {
         using var client = factory.CreatePortalClient();
 
-        using var login = await LoginAsync(client, "alice", FakeLdapAuthenticator.ValidPassword);
+        using var login = await TestAuth.LoginAsync(client, "alice", FakeLdapAuthenticator.ValidPassword);
 
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
         var body = await login.Content.ReadFromJsonAsync<CurrentUser>();
@@ -41,7 +41,7 @@ public sealed class AuthEndpointsTests(PortalFactory factory) : IClassFixture<Po
     public async Task Logout_deletes_the_cookie_and_me_returns_401_afterwards()
     {
         using var client = factory.CreatePortalClient();
-        using (var login = await LoginAsync(client, "alice", FakeLdapAuthenticator.ValidPassword))
+        using (var login = await TestAuth.LoginAsync(client, "alice", FakeLdapAuthenticator.ValidPassword))
         {
             Assert.Equal(HttpStatusCode.OK, login.StatusCode);
         }
@@ -69,7 +69,7 @@ public sealed class AuthEndpointsTests(PortalFactory factory) : IClassFixture<Po
     {
         using var client = factory.CreatePortalClient();
 
-        using var login = await LoginAsync(client, userName, password);
+        using var login = await TestAuth.LoginAsync(client, userName, password);
 
         Assert.Equal(expected, login.StatusCode);
         Assert.False(login.Headers.Contains(HeaderNames.SetCookie));
@@ -89,7 +89,7 @@ public sealed class AuthEndpointsTests(PortalFactory factory) : IClassFixture<Po
         using var client = factory.CreatePortalClient();
         var callsBefore = factory.Ldap.CallCount;
 
-        using var login = await LoginAsync(client, userName, password);
+        using var login = await TestAuth.LoginAsync(client, userName, password);
 
         Assert.Equal(HttpStatusCode.BadRequest, login.StatusCode);
         Assert.Equal(callsBefore, factory.Ldap.CallCount);
@@ -104,16 +104,16 @@ public sealed class AuthEndpointsTests(PortalFactory factory) : IClassFixture<Po
         // Its own login, so the per-account throttle does not block alice in other tests.
         for (var attempt = 1; attempt <= 5; attempt++)
         {
-            using var allowed = await LoginAsync(client, "carol", "wrong-password");
+            using var allowed = await TestAuth.LoginAsync(client, "carol", "wrong-password");
             Assert.Equal(HttpStatusCode.Unauthorized, allowed.StatusCode);
         }
 
-        using var limited = await LoginAsync(client, "alice", FakeLdapAuthenticator.ValidPassword);
+        using var limited = await TestAuth.LoginAsync(client, "alice", FakeLdapAuthenticator.ValidPassword);
         Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
 
         // The limit is per address: another address is still allowed.
         using var otherClient = factory.CreatePortalClient();
-        using var other = await LoginAsync(otherClient, "alice", FakeLdapAuthenticator.ValidPassword);
+        using var other = await TestAuth.LoginAsync(otherClient, "alice", FakeLdapAuthenticator.ValidPassword);
         Assert.Equal(HttpStatusCode.OK, other.StatusCode);
     }
 
@@ -123,13 +123,13 @@ public sealed class AuthEndpointsTests(PortalFactory factory) : IClassFixture<Po
         for (var attempt = 1; attempt <= FailedLoginThrottle.PermitLimit; attempt++)
         {
             using var client = factory.CreatePortalClient();
-            using var failed = await LoginAsync(client, "dave", "wrong-password");
+            using var failed = await TestAuth.LoginAsync(client, "dave", "wrong-password");
             Assert.Equal(HttpStatusCode.Unauthorized, failed.StatusCode);
         }
 
         var callsBefore = factory.Ldap.CallCount;
         using var freshClient = factory.CreatePortalClient();
-        using var limited = await LoginAsync(freshClient, "DAVE", "wrong-password");
+        using var limited = await TestAuth.LoginAsync(freshClient, "DAVE", "wrong-password");
 
         Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
         Assert.Equal(callsBefore, factory.Ldap.CallCount);
@@ -170,9 +170,6 @@ public sealed class AuthEndpointsTests(PortalFactory factory) : IClassFixture<Po
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
-
-    private static Task<HttpResponseMessage> LoginAsync(HttpClient client, string? userName, string? password) =>
-        client.PostAsJsonAsync("/api/auth/login", new { userName, password });
 
     private static SetCookieHeaderValue GetAuthCookie(HttpResponseMessage response)
     {

@@ -13,9 +13,10 @@ namespace securitycheck_portal.Tests;
 
 /// <summary>
 /// Hosts the API in the <c>Testing</c> environment with fake configuration, a fake directory
-/// and a temporary web root that contains <c>index.html</c>. Nothing touches the network or AD.
+/// and a temporary web root that contains <c>index.html</c>. Nothing touches the network or AD, and
+/// the connection string is never opened; tests that need a database use <see cref="DatabasePortalFactory"/>.
 /// </summary>
-public sealed class PortalFactory : WebApplicationFactory<Program>
+public class PortalFactory : WebApplicationFactory<Program>
 {
     public const string IndexHtml = "<!doctype html><html><body>securitycheck-portal test shell</body></html>";
 
@@ -84,6 +85,8 @@ public sealed class PortalFactory : WebApplicationFactory<Program>
                 ["Auth:Ldap:SearchBase"] = "DC=example,DC=invalid",
                 ["Auth:Ldap:AllowedGroupDn"] = "CN=SecurityCheck Users,OU=Groups,DC=example,DC=invalid",
                 ["Auth:Ldap:ConnectTimeoutSeconds"] = "1",
+                // Satisfies start-up validation; registering the DbContext does not open a connection.
+                ["ConnectionStrings:Portal"] = "Host=db.invalid;Database=securitycheck_portal_tests",
             });
         });
 
