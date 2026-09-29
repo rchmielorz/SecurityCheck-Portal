@@ -340,25 +340,25 @@ Brak danych do migracji. Wartość `theme` w `localStorage` jest nowa; brak wpis
 
 #### Automated
 
-- [x] 4.1 Typecheck przechodzi: `npm run typecheck`
-- [x] 4.2 Build przechodzi: `npm run build`
-- [x] 4.3 Brak `window.confirm` w kodzie: wyszukanie `window.confirm` w `web/app` nie zwraca trafień
-- [x] 4.4 Brak skopiowanego stylu przycisku głównego poza komponentami: wyszukanie `bg-blue-600` w `web/app/routes` nie zwraca trafień
+- [x] 4.1 Typecheck przechodzi: `npm run typecheck` — aeddeba
+- [x] 4.2 Build przechodzi: `npm run build` — aeddeba
+- [x] 4.3 Brak `window.confirm` w kodzie: wyszukanie `window.confirm` w `web/app` nie zwraca trafień — aeddeba
+- [x] 4.4 Brak skopiowanego stylu przycisku głównego poza komponentami: wyszukanie `bg-blue-600` w `web/app/routes` nie zwraca trafień — aeddeba
 
 #### Manual
 
-- [x] 4.5 Dodanie i lista repozytoriów działają jak dotąd, w obu motywach
-- [x] 4.6 Dodanie, sprawdzenie, dezaktywacja i usunięcie wzorca działają, a usunięcie pyta w oknie dialogowym (Esc anuluje)
-- [x] 4.7 Każdy stan dopasowania jest rozpoznawalny po tekście i ikonie, nie tylko po kolorze
-- [x] 4.8 Błędy formularzy są powiązane z polami (`aria-invalid`, `aria-describedby`) i ogłaszane
+- [x] 4.5 Dodanie i lista repozytoriów działają jak dotąd, w obu motywach — aeddeba
+- [x] 4.6 Dodanie, sprawdzenie, dezaktywacja i usunięcie wzorca działają, a usunięcie pyta w oknie dialogowym (Esc anuluje) — aeddeba
+- [x] 4.7 Każdy stan dopasowania jest rozpoznawalny po tekście i ikonie, nie tylko po kolorze — aeddeba
+- [x] 4.8 Błędy formularzy są powiązane z polami (`aria-invalid`, `aria-describedby`) i ogłaszane — aeddeba
 
 ### Phase 5: Dokumentacja
 
 #### Automated
 
-- [ ] 5.1 Typecheck przechodzi: `npm run typecheck`
-- [ ] 5.2 `AGENTS.md` zawiera sekcję UI: wyszukanie `styleguide` w `AGENTS.md` zwraca trafienie
+- [x] 5.1 Typecheck przechodzi: `npm run typecheck`
+- [x] 5.2 `AGENTS.md` zawiera sekcję UI: wyszukanie `styleguide` w `AGENTS.md` zwraca trafienie
 
 #### Manual
 
-- [ ] 5.3 `AGENTS.md` i `web/README.md` są zgodne z rzeczywistym stanem kodu i nie zawierają starego tekstu szablonu
+- [x] 5.3 `AGENTS.md` i `web/README.md` są zgodne z rzeczywistym stanem kodu i nie zawierają starego tekstu szablonu

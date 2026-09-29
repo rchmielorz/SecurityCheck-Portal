@@ -32,6 +32,17 @@ SecurityCheck Portal is an internal tool that scans dependencies of customer-dep
 - `cd web && npm run typecheck` — run after adding or renaming routes.
 - Other UI scripts: see @web/package.json (run from `web/`).
 
+## UI Conventions
+
+- Design tokens live only in `web/app/app.css`: `@theme static` holds the light values, `.dark` overrides the same variable names. Palette from the tweakcn "qrafthive" theme; primary is darkened (`#ba5c1f`) to reach AA with white text. Use semantic tokens (`bg-surface`, `text-text-muted`, `bg-primary`, `text-danger-fg`, …), not raw `gray-*`/`blue-*`/`red-*` utilities or hex values.
+- Dark mode is a `dark` class on `<html>`; the `dark:` variant is class-based (`@custom-variant` in `app.css`). An inline script in `web/app/root.tsx` sets the class before first paint; `ThemeToggle` cycles system → light → dark and stores it in `localStorage` key `theme` (`system` = key removed).
+- Shared UI is in `web/app/components/` (`Button`, `Field`/`Input`, `Card`, `Alert`, `Badge`, `ConfirmDialog`, `ThemeToggle`, `BrandMark`, plus `styles.ts` with `focusRing`, `linkClass`, `cx`). Use them; do not copy Tailwind class strings between routes. If a pattern repeats, add or extend a shared component and show it on `/styleguide`.
+- Severity and status (critical/high/medium/low, success/warning/danger/info/neutral/new/accepted-risk) are rendered with `Badge` (text + icon); colour must never be the only cue. Inline messages use `Alert`.
+- Destructive actions use `ConfirmDialog`, not `window.confirm`.
+- Every new colour token needs a light and a `.dark` value and must reach WCAG AA (4.5:1 text on its background); add the pair to `PAIRS` in `web/app/routes/styleguide.tsx` and check it in both themes.
+- `/styleguide` (token swatches, contrast table, component gallery) is registered in `web/app/routes.ts` only when `NODE_ENV !== "production"`, so it exists under `npm run dev` and not in the build. It shows no application data.
+- UI text is Polish and hard-coded (no i18n). System font stack only (`--font-sans`); no external fonts, icon sets or CDN assets, and no new UI dependencies for styling.
+
 ## Testing
 
 - `dotnet test api.Tests` — run the API tests (xUnit, `api.Tests/securitycheck-portal.Tests.csproj`). They host the API in-memory with a fake LDAP authenticator and a fake Git tag source (`api.Tests/PortalFactory.cs`), so they need no network, AD or Git server.
