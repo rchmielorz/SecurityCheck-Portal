@@ -17,6 +17,7 @@ export const links: Route.LinksFunction = () => [
 ];
 
 // Stored `theme` ∈ system | light | dark; missing/invalid/blocked storage = system.
+// Mirrors readStoredTheme/applyTheme in components/theme-toggle.tsx: change both together.
 const THEME_INIT_SCRIPT = `(function(){var m=null;try{m=localStorage.getItem("theme")}catch(e){}var d=m==="dark"||(m!=="light"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d)})();`;
 
 export function Layout({ children }: { children: React.ReactNode }) {

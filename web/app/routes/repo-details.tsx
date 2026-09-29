@@ -142,6 +142,7 @@ export async function clientAction({ params, request }: Route.ClientActionArgs):
 }
 
 type PendingDelete = {
+  invoker?: HTMLElement;
   intent: "deletePattern" | "deleteRepo";
   patternId?: number;
   title: string;
@@ -206,8 +207,9 @@ function PatternRow({
         <Button
           variant="danger"
           disabled={disabled}
-          onClick={() =>
+          onClick={(event) =>
             onRequestDelete({
+              invoker: event.currentTarget,
               intent: "deletePattern",
               patternId: pattern.id,
               title: `Usunąć wzorzec ${pattern.pattern}?`,
@@ -228,6 +230,7 @@ export default function RepoDetails({ loaderData, actionData }: Route.ComponentP
   const navigation = useNavigation();
   const submit = useSubmit();
   const addPatternForm = useRef<HTMLFormElement>(null);
+  const patternsHeading = useRef<HTMLHeadingElement>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   // Keep the last dialog texts while the dialog closes.
   const [dialogTexts, setDialogTexts] = useState({ title: "", description: "" });
@@ -287,8 +290,9 @@ export default function RepoDetails({ loaderData, actionData }: Route.ComponentP
           <Button
             variant="danger"
             disabled={submitting}
-            onClick={() =>
+            onClick={(event) =>
               requestDelete({
+                invoker: event.currentTarget,
                 intent: "deleteRepo",
                 title: `Usunąć repozytorium ${repositoryDisplayName(repository)}?`,
                 description: "Repozytorium zostanie trwale usunięte.",
@@ -304,7 +308,9 @@ export default function RepoDetails({ loaderData, actionData }: Route.ComponentP
 
       <section className="rounded-2xl border border-border-subtle bg-surface-raised shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle p-4">
-          <h2 className="text-lg font-semibold">Wzorce wersji</h2>
+          <h2 ref={patternsHeading} tabIndex={-1} className="text-lg font-semibold focus:outline-none">
+            Wzorce wersji
+          </h2>
           <Link to={{ search: toggleSearch ? `?${toggleSearch}` : "" }} replace className={`text-sm ${linkClass}`}>
             {showInactive ? "Ukryj nieaktywne" : `Pokaż nieaktywne (${inactiveCount})`}
           </Link>
@@ -362,6 +368,9 @@ export default function RepoDetails({ loaderData, actionData }: Route.ComponentP
         confirmLabel="Usuń"
         onConfirm={confirmDelete}
         onCancel={() => setPendingDelete(null)}
+        invoker={pendingDelete?.invoker}
+        // The invoking button is disabled or removed once the delete runs; keep focus on a stable heading.
+        focusAfterConfirm={() => patternsHeading.current}
       />
     </main>
   );

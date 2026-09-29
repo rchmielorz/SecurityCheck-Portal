@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 
-export type ThemeMode = "system" | "light" | "dark";
+// Keep the key and the resolve logic in sync with THEME_INIT_SCRIPT in root.tsx, which sets the
+// initial `dark` class before first paint (it cannot import this module).
+type ThemeMode = "system" | "light" | "dark";
 
-export const THEME_STORAGE_KEY = "theme";
+const THEME_STORAGE_KEY = "theme";
 
 const ORDER: ThemeMode[] = ["system", "light", "dark"];
 const LABELS: Record<ThemeMode, string> = {
@@ -11,7 +13,7 @@ const LABELS: Record<ThemeMode, string> = {
   dark: "ciemny",
 };
 
-export function readStoredTheme(): ThemeMode {
+function readStoredTheme(): ThemeMode {
   try {
     const value = window.localStorage.getItem(THEME_STORAGE_KEY);
     return value === "light" || value === "dark" ? value : "system";
@@ -24,7 +26,7 @@ function systemPrefersDark(): boolean {
   return typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
-export function applyTheme(mode: ThemeMode) {
+function applyTheme(mode: ThemeMode) {
   const dark = mode === "dark" || (mode === "system" && systemPrefersDark());
   document.documentElement.classList.toggle("dark", dark);
 }
@@ -65,13 +67,9 @@ function Icon({ mode }: { mode: ThemeMode }) {
 }
 
 export function ThemeToggle() {
-  // Start as "system" so server/prerender and first client render match; the
-  // stored choice is read after mount.
-  const [mode, setMode] = useState<ThemeMode>("system");
-
-  useEffect(() => {
-    setMode(readStoredTheme());
-  }, []);
+  // Read the stored choice on the first render. The app is a client-only SPA (ssr: false)
+  // and the prerendered root shows only HydrateFallback, so this never renders on the server.
+  const [mode, setMode] = useState<ThemeMode>(() => (typeof window === "undefined" ? "system" : readStoredTheme()));
 
   useEffect(() => {
     if (mode !== "system" || typeof window.matchMedia !== "function") return;

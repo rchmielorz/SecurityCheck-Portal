@@ -70,7 +70,7 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 
   return (
     <main className="container mx-auto p-4">
-      <h1 className="sr-only">Repozytoria</h1>
+      <h1 className="sr-only">Panel repozytoriów</h1>
       <Card className="mb-8">
         <h2 className="mb-4 text-lg font-semibold">Dodaj repozytorium</h2>
         <Form method="post" className="space-y-4" noValidate>

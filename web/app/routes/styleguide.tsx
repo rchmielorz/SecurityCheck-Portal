@@ -104,9 +104,9 @@ function useTokens(): { values: Record<string, string>; dark: boolean } {
   return state;
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({ id, title, children }: { id?: string; title: string; children: ReactNode }) {
   return (
-    <section className="space-y-4">
+    <section id={id} className="space-y-4">
       <h2 className="border-b border-border-subtle pb-2 text-xl font-semibold">{title}</h2>
       {children}
     </section>
@@ -223,7 +223,7 @@ export default function Styleguide() {
         <Contrasts values={values} />
       </Section>
 
-      <Section title="Typografia">
+      <Section id="typografia" title="Typografia">
         <div className="space-y-2">
           <p className="text-2xl font-semibold">Nagłówek h1 – SecurityCheck Portal</p>
           <p className="text-lg font-semibold">Nagłówek h2 – Wzorce wersji</p>

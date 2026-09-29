@@ -285,6 +285,12 @@ Brak nowych zależności ani zasobów zewnętrznych; ikony inline SVG. Skrypt mo
 
 Brak danych do migracji. Wartość `theme` w `localStorage` jest nowa; brak wpisu oznacza „system”, czyli zachowanie sprzed zmiany.
 
+## Addendum (po implementacji)
+
+- **Paleta:** zamiast proponowanej granatowo-indygo/morskiej użyto palety z motywu tweakcn „qrafthive” (pomarańcz), zatwierdzonej w punkcie 2.5. Kolor przycisku głównego (`primary`, `#ba5c1f`) jest ciemniejszy niż w motywie (`#d87942`), bo biały tekst na oryginale ma tylko 3,12:1; oryginał zostaje w skali marki i na obwódce fokusu. Czcionek i zaokrągleń motywu nie przeniesiono (czcionka systemowa, bez zewnętrznych zasobów).
+- **Field:** zamiast opakowywać gotowe pole, `Field` używa render-prop (`{(control) => <Input {...control} />}`), a `Input` jest osobnym komponentem; kontrakt dostępności (`htmlFor`, `aria-invalid`, `aria-describedby`, `role="alert"`) bez zmian.
+- **Przegląd:** poprawki F1–F2 z `reviews/impl-review.md` (fokus po usunięciu w `ConfirmDialog`: `focusAfterConfirm`, `invoker`).
+
 ## References
 
 - Related research: `context/changes/in-context/research.md`
