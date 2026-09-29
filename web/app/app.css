@@ -4,44 +4,49 @@
    in root.tsx and by ThemeToggle), not by the OS setting alone. */
 @custom-variant dark (&:where(.dark, .dark *));
 
-@theme {
+/* `static`: always emit every token as a CSS variable (the styleguide reads
+   them at runtime; Tailwind would otherwise drop unused ones). */
+@theme static {
   --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
     "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
-  /* Brand scale (deep teal). Fixed across themes; use the semantic
+  /* Brand scale (orange, hue of the tweakcn "qrafthive" theme). Fixed across themes; use the semantic
      --color-primary* tokens below for buttons and links. */
-  --color-brand-50: #f0fdfa;
-  --color-brand-100: #ccfbf1;
-  --color-brand-200: #99f6e4;
-  --color-brand-300: #5eead4;
-  --color-brand-400: #2dd4bf;
-  --color-brand-500: #14b8a6;
-  --color-brand-600: #0f766e;
-  --color-brand-700: #115e59;
-  --color-brand-800: #134e4a;
-  --color-brand-900: #0f3d3a;
-  --color-brand-950: #042f2e;
+  --color-brand-50: #fff4ec;
+  --color-brand-100: #ffe6d6;
+  --color-brand-200: #ffcdaf;
+  --color-brand-300: #ffb58c;
+  --color-brand-400: #f89e6d;
+  --color-brand-500: #e78a54;
+  --color-brand-600: #d87942;
+  --color-brand-700: #ba5c1f;
+  --color-brand-800: #984a18;
+  --color-brand-900: #753b17;
+  --color-brand-950: #492108;
 
-  /* Semantic brand roles. Light: white on #0f766e ~5.5:1. Dark: #042f2e on #2dd4bf ~9:1. */
-  --color-primary: #0f766e;
-  --color-primary-hover: #115e59;
+  /* Semantic brand roles. The theme's own orange (#d87942) gives only 3.1:1 with white, so
+     buttons use the darker brand-700; brand-600 stays for ring/decoration. white on #ba5c1f ~4.5:1. */
+  --color-primary: #ba5c1f;
+  --color-primary-hover: #984a18;
   --color-primary-fg: #ffffff;
-  --color-primary-soft: #f0fdfa;
-  --color-primary-text: #0f766e; /* links/accents on surface, ~5.5:1 */
-  --color-ring: #0d9488;
+  --color-primary-soft: #fff4ec;
+  --color-primary-text: #984a18; /* links/accents on surface, ~5.5:1 */
+  --color-ring: #d87942;
+  --color-secondary: #527575; /* teal-gray accent from the tweakcn "qrafthive" theme */
+  --color-secondary-fg: #ffffff;
 
   /* Surfaces and borders (slate-tinted). */
   --color-surface: #ffffff;
-  --color-surface-muted: #f8fafc;
+  --color-surface-muted: #f3f4f6;
   --color-surface-raised: #ffffff;
-  --color-surface-hover: #f1f5f9;
-  --color-border: #cbd5e1;
-  --color-border-subtle: #e2e8f0;
+  --color-surface-hover: #eeeeee;
+  --color-border: #d1d5db;
+  --color-border-subtle: #e5e7eb;
 
   /* Text on surface: 16:1, 7.6:1, 4.8:1. */
-  --color-text: #0f172a;
-  --color-text-muted: #475569;
-  --color-text-subtle: #64748b;
+  --color-text: #111827;
+  --color-text-muted: #5f6673;
+  --color-text-subtle: #6b7280;
 
   /* Severity. Per family: solid (dots, bars, icons), soft (badge background),
      fg (text on soft, >= 4.5:1). */
@@ -86,24 +91,26 @@
 
 /* Dark values: same variable names, overridden under `.dark`. */
 .dark {
-  --color-primary: #2dd4bf;
-  --color-primary-hover: #5eead4;
-  --color-primary-fg: #042f2e;
-  --color-primary-soft: #0b2b2a;
-  --color-primary-text: #5eead4; /* ~11:1 on dark surface */
-  --color-ring: #2dd4bf;
+  --color-primary: #e78a54;
+  --color-primary-hover: #f89e6d;
+  --color-primary-fg: #121113;
+  --color-primary-soft: #341e12;
+  --color-primary-text: #f89e6d; /* ~11:1 on dark surface */
+  --color-ring: #e78a54;
+  --color-secondary: #5f8787;
+  --color-secondary-fg: #121113;
 
-  --color-surface: #0b1220;
-  --color-surface-muted: #0f1829;
-  --color-surface-raised: #162033;
-  --color-surface-hover: #1e293b;
-  --color-border: #475569;
-  --color-border-subtle: #263449;
+  --color-surface: #121113;
+  --color-surface-muted: #161617;
+  --color-surface-raised: #1b1b1b;
+  --color-surface-hover: #262626;
+  --color-border: #3a3a3a;
+  --color-border-subtle: #222222;
 
   /* ~17:1, ~12:1, ~7:1 on --color-surface. */
-  --color-text: #f1f5f9;
-  --color-text-muted: #cbd5e1;
-  --color-text-subtle: #94a3b8;
+  --color-text: #c1c1c1;
+  --color-text-muted: #a3a3a3;
+  --color-text-subtle: #888888;
 
   --color-critical: #f87171;
   --color-critical-soft: #3b1218;

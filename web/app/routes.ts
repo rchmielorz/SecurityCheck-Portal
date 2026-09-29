@@ -7,6 +7,8 @@ import {
 
 export default [
   route("login", "routes/login.tsx"),
+  // Dev-only design review page, outside the auth layout (shows no data).
+  ...(process.env.NODE_ENV !== "production" ? [route("styleguide", "routes/styleguide.tsx")] : []),
   layout("routes/app-layout.tsx", [
     index("routes/home.tsx"),
     route("repos/:repoId", "routes/repo-details.tsx"),

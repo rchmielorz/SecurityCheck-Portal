@@ -300,8 +300,8 @@ Brak danych do migracji. Wartość `theme` w `localStorage` jest nowa; brak wpis
 
 #### Automated
 
-- [x] 1.1 Typecheck przechodzi: `npm run typecheck` (w `web/`)
-- [x] 1.2 Build przechodzi: `npm run build` (w `web/`)
+- [x] 1.1 Typecheck przechodzi: `npm run typecheck` (w `web/`) — b997169
+- [x] 1.2 Build przechodzi: `npm run build` (w `web/`) — b997169
 
 #### Manual
 
@@ -312,9 +312,9 @@ Brak danych do migracji. Wartość `theme` w `localStorage` jest nowa; brak wpis
 
 #### Automated
 
-- [ ] 2.1 Typecheck przechodzi: `npm run typecheck`
-- [ ] 2.2 Build przechodzi: `npm run build`
-- [ ] 2.3 Build produkcyjny nie zawiera trasy styleguide: wyszukanie `styleguide` w `web/build/client` nie zwraca trafień
+- [x] 2.1 Typecheck przechodzi: `npm run typecheck`
+- [x] 2.2 Build przechodzi: `npm run build`
+- [x] 2.3 Build produkcyjny nie zawiera trasy styleguide: wyszukanie `styleguide` w `web/build/client` nie zwraca trafień
 
 #### Manual
 
