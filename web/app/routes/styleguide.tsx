@@ -6,8 +6,11 @@ import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { ConfirmDialog } from "../components/confirm-dialog";
 import { Field, Input } from "../components/field";
+import { PageHeading, SectionHeading } from "../components/headings";
+import { RepositoryList } from "../components/repository-list";
 import { focusRing } from "../components/styles";
 import { ThemeToggle } from "../components/theme-toggle";
+import type { RepositorySummary } from "../lib/patterns";
 
 // No `+types` import: typegen runs with NODE_ENV=production, so this dev-only
 // route gets no generated types there.
@@ -199,6 +202,40 @@ const ALERTS: Array<[AlertVariant, string]> = [
   ["success", "Wzorzec został dodany."],
 ];
 
+const SAMPLE_ONE: RepositorySummary[] = [
+  { id: 1, url: "https://gitlab-do.coig.app/oe/zespol-dotnet/pineapple.git", name: "pineapple", activePatternCount: 2 },
+];
+
+const SAMPLE_MANY: RepositorySummary[] = [
+  { id: 1, url: "https://gitlab-do.coig.app/oe/zespol-dotnet/pineapple.git", name: "pineapple", activePatternCount: 0 },
+  { id: 2, url: "https://gitlab-do.coig.app/oe/zespol-dotnet/banana.git", name: null, activePatternCount: 1 },
+  { id: 3, url: "https://gitlab-do.coig.app/oe/zespol-java/mango.git", name: "mango", activePatternCount: 2 },
+  { id: 4, url: "https://gitlab-do.coig.app/oe/zespol-java/kiwi.git", name: "kiwi", activePatternCount: 5 },
+  { id: 5, url: "https://gitlab-do.coig.app/oe/zespol-web/papaya.git", name: "papaya", activePatternCount: 12 },
+];
+
+const SAMPLE_LONG: RepositorySummary[] = [
+  {
+    id: 1,
+    url: "https://gitlab-do.coig.app/oe/zespol-platformy-wspolnej/podgrupa-z-bardzo-dlugą-nazwą/repozytorium-z-niezwykle-dlugim-adresem-url-do-sprawdzenia-zawijania.git",
+    name: "Repozytorium z bardzo długą nazwą własną, która nie mieści się w jednym wierszu na wąskim ekranie",
+    activePatternCount: 3,
+  },
+  {
+    id: 2,
+    url: "https://gitlab-do.coig.app/oe/zespol-platformy-wspolnej/podgrupa-z-bardzo-dlugą-nazwą/repozytorium-bez-nazwy-wlasnej.git",
+    name: null,
+    activePatternCount: 0,
+  },
+];
+
+const LIST_CASES: Array<[string, RepositorySummary[]]> = [
+  ["Brak repozytoriów", []],
+  ["Jedno repozytorium", SAMPLE_ONE],
+  ["Kilka repozytoriów (0, 1, 2, 5, 12 wzorców)", SAMPLE_MANY],
+  ["Długie nazwy i adresy", SAMPLE_LONG],
+];
+
 export default function Styleguide() {
   const { values, dark } = useTokens();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -291,6 +328,33 @@ export default function Styleguide() {
           <div className="flex flex-wrap gap-2">
             {BADGE_KINDS.map((kind) => (
               <Badge key={kind} kind={kind} />
+            ))}
+          </div>
+        </div>
+
+        <div id="naglowki" className="space-y-3">
+          <h3 className="text-lg font-semibold">Nagłówki</h3>
+          <div className="max-w-2xl space-y-4">
+            <PageHeading action={<Button variant="secondary">Akcja</Button>}>Nagłówek strony (z akcją)</PageHeading>
+            <PageHeading>Nagłówek strony (bez akcji)</PageHeading>
+            <SectionHeading>Nagłówek sekcji</SectionHeading>
+          </div>
+        </div>
+
+        <div id="lista-repozytoriow" className="space-y-3">
+          <h3 className="text-lg font-semibold">Lista repozytoriów</h3>
+          {/* Sample data only: block link navigation so a click does not leave the gallery. */}
+          <div
+            className="max-w-3xl space-y-6"
+            onClickCapture={(e) => {
+              if ((e.target as HTMLElement).closest("a")) e.preventDefault();
+            }}
+          >
+            {LIST_CASES.map(([label, repositories]) => (
+              <div key={label} className="space-y-2">
+                <p className="text-sm text-text-muted">{label}</p>
+                <RepositoryList repositories={repositories} />
+              </div>
             ))}
           </div>
         </div>

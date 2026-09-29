@@ -72,6 +72,17 @@ export function repositoryDisplayName(repository: { url: string; name: string | 
   }
 }
 
+/** Polish count label, e.g. "1 aktywny wzorzec", "3 aktywne wzorce", "5 aktywnych wzorców". */
+export function patternCountLabel(count: number): string {
+  if (count === 1) return "1 aktywny wzorzec";
+  const lastDigit = count % 10;
+  const lastTwo = count % 100;
+  if (lastDigit >= 2 && lastDigit <= 4 && (lastTwo < 12 || lastTwo > 14)) {
+    return `${count} aktywne wzorce`;
+  }
+  return `${count} aktywnych wzorców`;
+}
+
 export type ResolutionView = {
   /** Main line of the result. */
   text: string;
