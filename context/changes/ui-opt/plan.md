@@ -214,6 +214,10 @@ Brak nowych zależności ani zasobów; strzałka i ikony to inline SVG. Zmiana j
 
 Brak danych do migracji. `patternCountLabel` zmienia lokalizację (z `home.tsx` do `web/app/lib/patterns.ts`) bez zmiany zachowania.
 
+## Addendum (po implementacji)
+
+- **Fokus po dodaniu repozytorium (poza pierwotnym zakresem, na prośbę użytkownika):** po dodaniu repozytorium `home.tsx` przekierowuje na `/repos/{id}?nowy=1`, a `repo-details.tsx` ustawia wtedy fokus w polu „Nowy wzorzec” i usuwa parametr z adresu. Zwykłe wejście, odświeżenie i przełączanie „Pokaż nieaktywne” nie ustawiają fokusu. Zmiana dotyka `repo-details.tsx`, mimo że plan obejmuje jeden widok.
+
 ## References
 
 - Related research: `context/changes/ui-opt/research.md`
@@ -229,29 +233,29 @@ Brak danych do migracji. `patternCountLabel` zmienia lokalizację (z `home.tsx` 
 
 #### Automated
 
-- [x] 1.1 Typecheck przechodzi: `npm run typecheck` (w `web/`)
-- [x] 1.2 Build przechodzi: `npm run build` (w `web/`)
-- [x] 1.3 Build nie zawiera trasy styleguide: wyszukanie `styleguide` w `web/build/client` nie zwraca trafień
+- [x] 1.1 Typecheck przechodzi: `npm run typecheck` (w `web/`) — ba7793d
+- [x] 1.2 Build przechodzi: `npm run build` (w `web/`) — ba7793d
+- [x] 1.3 Build nie zawiera trasy styleguide: wyszukanie `styleguide` w `web/build/client` nie zwraca trafień — ba7793d
 
 #### Manual
 
-- [x] 1.4 `/styleguide` (dev) pokazuje nagłówki i listę repozytoriów w wariantach (brak, jedno, kilka, długie nazwy i adresy) w obu motywach
-- [x] 1.5 Wiersz z 0 aktywnych wzorców ma ostrzegawczy `Badge` z tekstem i ikoną, odróżnialny od wierszy z wzorcami
+- [x] 1.4 `/styleguide` (dev) pokazuje nagłówki i listę repozytoriów w wariantach (brak, jedno, kilka, długie nazwy i adresy) w obu motywach — ba7793d
+- [x] 1.5 Wiersz z 0 aktywnych wzorców ma ostrzegawczy `Badge` z tekstem i ikoną, odróżnialny od wierszy z wzorcami — ba7793d
 
 ### Phase 2: Widok home
 
 #### Automated
 
-- [ ] 2.1 Typecheck przechodzi: `npm run typecheck`
-- [ ] 2.2 Build przechodzi: `npm run build`
-- [ ] 2.3 Brak twardych wartości w plikach zmiany: skan na `home.tsx`, `headings.tsx` i `repository-list.tsx` daje 0 w każdym pliku
-- [ ] 2.4 Brak ukrytego nagłówka w widoku: wyszukanie `sr-only` w `web/app/routes/home.tsx` nie zwraca trafień
+- [x] 2.1 Typecheck przechodzi: `npm run typecheck`
+- [x] 2.2 Build przechodzi: `npm run build`
+- [x] 2.3 Brak twardych wartości w plikach zmiany: skan na `home.tsx`, `headings.tsx` i `repository-list.tsx` daje 0 w każdym pliku
+- [x] 2.4 Brak ukrytego nagłówka w widoku: wyszukanie `sr-only` w `web/app/routes/home.tsx` nie zwraca trafień
 
 #### Manual
 
-- [ ] 2.5 Po zalogowaniu widać tytuł „Repozytoria”, listę, a pod nią kartę „Dodaj repozytorium”
-- [ ] 2.6 Dodanie repozytorium działa jak dotąd (przekierowanie do szczegółów, komunikat błędu przy złym adresie i duplikacie)
-- [ ] 2.7 Link „Dodaj repozytorium” przewija do formularza
+- [x] 2.5 Po zalogowaniu widać tytuł „Repozytoria”, listę, a pod nią kartę „Dodaj repozytorium”
+- [x] 2.6 Dodanie repozytorium działa jak dotąd (przekierowanie do szczegółów, komunikat błędu przy złym adresie i duplikacie)
+- [x] 2.7 Link „Dodaj repozytorium” przewija do formularza
 
 ### Phase 3: Stany i bramka wizualna
 

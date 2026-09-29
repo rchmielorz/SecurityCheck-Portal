@@ -28,6 +28,8 @@ const REPO_HAS_PATTERNS = "Najpierw usuń wszystkie wzorce tego repozytorium.";
 const RESOLVE_INACTIVE = "Wzorzec jest nieaktywny — aktywuj go, aby sprawdzić.";
 
 const SHOW_INACTIVE_PARAM = "nieaktywne";
+// Set by the add-repository redirect: focus the new-pattern field once, then drop the parameter.
+const FOCUS_NEW_PATTERN_PARAM = "nowy";
 
 type Intent = "addPattern" | "resolve" | "deactivate" | "activate" | "deletePattern" | "deleteRepo";
 
@@ -226,11 +228,12 @@ function PatternRow({
 
 export default function RepoDetails({ loaderData, actionData }: Route.ComponentProps) {
   const { repository, events } = loaderData;
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigation = useNavigation();
   const submit = useSubmit();
   const addPatternForm = useRef<HTMLFormElement>(null);
   const patternsHeading = useRef<HTMLHeadingElement>(null);
+  const newPatternInput = useRef<HTMLInputElement>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   // Keep the last dialog texts while the dialog closes.
   const [dialogTexts, setDialogTexts] = useState({ title: "", description: "" });
@@ -247,6 +250,15 @@ export default function RepoDetails({ loaderData, actionData }: Route.ComponentP
 
   const addPatternError = actionData?.intent === "addPattern" ? actionData.error : undefined;
   const otherError = actionData && actionData.intent !== "addPattern" ? actionData.error : undefined;
+
+  // Only right after a repository was added: ordinary visits must not steal focus.
+  useEffect(() => {
+    if (searchParams.get(FOCUS_NEW_PATTERN_PARAM) !== "1") return;
+    newPatternInput.current?.focus();
+    const next = new URLSearchParams(searchParams);
+    next.delete(FOCUS_NEW_PATTERN_PARAM);
+    setSearchParams(next, { replace: true });
+  }, []);
 
   useEffect(() => {
     if (actionData?.intent === "addPattern" && !actionData.error) {
@@ -332,7 +344,15 @@ export default function RepoDetails({ loaderData, actionData }: Route.ComponentP
           <Field label="Nowy wzorzec" error={addPatternError}>
             {(control) => (
               <div className="flex flex-wrap gap-2">
-                <Input name="pattern" type="text" placeholder="2.1.*" mono className="w-40" {...control} />
+                <Input
+                  ref={newPatternInput}
+                  name="pattern"
+                  type="text"
+                  placeholder="2.1.*"
+                  mono
+                  className="w-40"
+                  {...control}
+                />
                 <Button type="submit" name="intent" value="addPattern" disabled={submitting}>
                   {busy === "addPattern:" ? "Dodawanie…" : "Dodaj wzorzec"}
                 </Button>

@@ -1,13 +1,15 @@
-import { Form, Link, redirect, useNavigation } from "react-router";
+import { Form, redirect, useNavigation } from "react-router";
 
 import type { Route } from "./+types/home";
 import { Alert } from "../components/alert";
 import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { Field, Input } from "../components/field";
-import { cx, focusRing } from "../components/styles";
+import { PageHeading, SectionHeading } from "../components/headings";
+import { RepositoryList } from "../components/repository-list";
+import { linkClass } from "../components/styles";
 import { apiFetch } from "../lib/api";
-import { repositoryDisplayName, type RepositoryDetails, type RepositorySummary } from "../lib/patterns";
+import { type RepositoryDetails, type RepositorySummary } from "../lib/patterns";
 
 const ERROR_MESSAGES: Record<number, string> = {
   400: "Podaj poprawny adres HTTPS repozytorium z dozwolonego serwera Git.",
@@ -47,20 +49,11 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 
   if (response.status === 201) {
     const repository = (await response.json()) as RepositoryDetails;
-    return redirect(`/repos/${repository.id}`);
+    // `nowy=1` makes the details page focus the new-pattern field once (see repo-details.tsx).
+    return redirect(`/repos/${repository.id}?nowy=1`);
   }
 
   return { error: ERROR_MESSAGES[response.status] ?? UNEXPECTED_ERROR };
-}
-
-function patternCountLabel(count: number): string {
-  if (count === 1) return "1 aktywny wzorzec";
-  const lastDigit = count % 10;
-  const lastTwo = count % 100;
-  if (lastDigit >= 2 && lastDigit <= 4 && (lastTwo < 12 || lastTwo > 14)) {
-    return `${count} aktywne wzorce`;
-  }
-  return `${count} aktywnych wzorców`;
 }
 
 export default function Home({ loaderData, actionData }: Route.ComponentProps) {
@@ -69,10 +62,23 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
   const submitting = navigation.state !== "idle" && navigation.formMethod === "POST";
 
   return (
-    <main className="container mx-auto p-4">
-      <h1 className="sr-only">Panel repozytoriów</h1>
-      <Card className="mb-8">
-        <h2 className="mb-4 text-lg font-semibold">Dodaj repozytorium</h2>
+    <main className="container mx-auto space-y-8 p-4">
+      <PageHeading
+        action={
+          <a href="#dodaj-repozytorium" className={linkClass}>
+            Dodaj repozytorium
+          </a>
+        }
+      >
+        Repozytoria
+      </PageHeading>
+
+      <RepositoryList repositories={repositories} />
+
+      <Card id="dodaj-repozytorium">
+        <div className="mb-4">
+          <SectionHeading>Dodaj repozytorium</SectionHeading>
+        </div>
         <Form method="post" className="space-y-4" noValidate>
           <Field label="Adres repozytorium (HTTPS)">
             {(control) => (
@@ -93,33 +99,6 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
           </Button>
         </Form>
       </Card>
-
-      <h2 className="mb-4 text-lg font-semibold">Repozytoria</h2>
-      {repositories.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-border p-8 text-center text-text-muted">
-          Nie dodano jeszcze żadnego repozytorium.
-        </p>
-      ) : (
-        <ul className="divide-y divide-border-subtle rounded-2xl border border-border-subtle bg-surface-raised">
-          {repositories.map((repository) => (
-            <li key={repository.id}>
-              <Link
-                to={`/repos/${repository.id}`}
-                className={cx(
-                  "flex flex-wrap items-center justify-between gap-2 p-4 hover:bg-surface-hover",
-                  focusRing,
-                )}
-              >
-                <span className="min-w-0">
-                  <span className="block font-medium text-primary-text">{repositoryDisplayName(repository)}</span>
-                  <span className="block break-all text-sm text-text-muted">{repository.url}</span>
-                </span>
-                <span className="text-sm text-text-muted">{patternCountLabel(repository.activePatternCount)}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
     </main>
   );
 }
