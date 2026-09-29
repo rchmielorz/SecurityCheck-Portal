@@ -10,16 +10,21 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 
+// Stored `theme` ∈ system | light | dark; missing/invalid/blocked storage = system.
+const THEME_INIT_SCRIPT = `(function(){var m=null;try{m=localStorage.getItem("theme")}catch(e){}var d=m==="dark"||(m!=="light"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d)})();`;
+
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pl">
+    <html lang="pl" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {/* Runs synchronously before first paint to avoid a flash of the wrong theme. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <Meta />
         <Links />
       </head>
-      <body className="font-sans text-gray-900 dark:text-gray-100">
+      <body className="bg-surface font-sans text-text">
         {children}
         <ScrollRestoration />
         <Scripts />

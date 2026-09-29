@@ -300,8 +300,8 @@ Brak danych do migracji. Wartość `theme` w `localStorage` jest nowa; brak wpis
 
 #### Automated
 
-- [ ] 1.1 Typecheck przechodzi: `npm run typecheck` (w `web/`)
-- [ ] 1.2 Build przechodzi: `npm run build` (w `web/`)
+- [x] 1.1 Typecheck przechodzi: `npm run typecheck` (w `web/`)
+- [x] 1.2 Build przechodzi: `npm run build` (w `web/`)
 
 #### Manual
 

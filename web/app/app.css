@@ -1,15 +1,156 @@
 @import "tailwindcss";
 
+/* Dark mode is driven by the `dark` class on <html> (set by the inline script
+   in root.tsx and by ThemeToggle), not by the OS setting alone. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
     "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+  /* Brand scale (deep teal). Fixed across themes; use the semantic
+     --color-primary* tokens below for buttons and links. */
+  --color-brand-50: #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-200: #99f6e4;
+  --color-brand-300: #5eead4;
+  --color-brand-400: #2dd4bf;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0f766e;
+  --color-brand-700: #115e59;
+  --color-brand-800: #134e4a;
+  --color-brand-900: #0f3d3a;
+  --color-brand-950: #042f2e;
+
+  /* Semantic brand roles. Light: white on #0f766e ~5.5:1. Dark: #042f2e on #2dd4bf ~9:1. */
+  --color-primary: #0f766e;
+  --color-primary-hover: #115e59;
+  --color-primary-fg: #ffffff;
+  --color-primary-soft: #f0fdfa;
+  --color-primary-text: #0f766e; /* links/accents on surface, ~5.5:1 */
+  --color-ring: #0d9488;
+
+  /* Surfaces and borders (slate-tinted). */
+  --color-surface: #ffffff;
+  --color-surface-muted: #f8fafc;
+  --color-surface-raised: #ffffff;
+  --color-surface-hover: #f1f5f9;
+  --color-border: #cbd5e1;
+  --color-border-subtle: #e2e8f0;
+
+  /* Text on surface: 16:1, 7.6:1, 4.8:1. */
+  --color-text: #0f172a;
+  --color-text-muted: #475569;
+  --color-text-subtle: #64748b;
+
+  /* Severity. Per family: solid (dots, bars, icons), soft (badge background),
+     fg (text on soft, >= 4.5:1). */
+  --color-critical: #dc2626;
+  --color-critical-soft: #fef2f2;
+  --color-critical-fg: #991b1b;
+  --color-high: #ea580c;
+  --color-high-soft: #fff7ed;
+  --color-high-fg: #9a3412;
+  --color-medium: #d97706;
+  --color-medium-soft: #fffbeb;
+  --color-medium-fg: #92400e;
+  --color-low: #0284c7;
+  --color-low-soft: #f0f9ff;
+  --color-low-fg: #075985;
+
+  /* Status. */
+  --color-success: #16a34a;
+  --color-success-soft: #f0fdf4;
+  --color-success-fg: #166534;
+  --color-warning: #ca8a04;
+  --color-warning-soft: #fefce8;
+  --color-warning-fg: #854d0e;
+  --color-danger: #e11d48;
+  --color-danger-soft: #fff1f2;
+  --color-danger-fg: #9f1239;
+  --color-info: #2563eb;
+  --color-info-soft: #eff6ff;
+  --color-info-fg: #1e40af;
+  --color-neutral: #64748b;
+  --color-neutral-soft: #f1f5f9;
+  --color-neutral-fg: #334155;
+
+  /* Finding lifecycle. */
+  --color-new: #7c3aed;
+  --color-new-soft: #f5f3ff;
+  --color-new-fg: #5b21b6;
+  --color-accepted-risk: #c026d3;
+  --color-accepted-risk-soft: #fdf4ff;
+  --color-accepted-risk-fg: #86198f;
+}
+
+/* Dark values: same variable names, overridden under `.dark`. */
+.dark {
+  --color-primary: #2dd4bf;
+  --color-primary-hover: #5eead4;
+  --color-primary-fg: #042f2e;
+  --color-primary-soft: #0b2b2a;
+  --color-primary-text: #5eead4; /* ~11:1 on dark surface */
+  --color-ring: #2dd4bf;
+
+  --color-surface: #0b1220;
+  --color-surface-muted: #0f1829;
+  --color-surface-raised: #162033;
+  --color-surface-hover: #1e293b;
+  --color-border: #475569;
+  --color-border-subtle: #263449;
+
+  /* ~17:1, ~12:1, ~7:1 on --color-surface. */
+  --color-text: #f1f5f9;
+  --color-text-muted: #cbd5e1;
+  --color-text-subtle: #94a3b8;
+
+  --color-critical: #f87171;
+  --color-critical-soft: #3b1218;
+  --color-critical-fg: #fecaca;
+  --color-high: #fb923c;
+  --color-high-soft: #3a1d0a;
+  --color-high-fg: #fed7aa;
+  --color-medium: #fbbf24;
+  --color-medium-soft: #33240a;
+  --color-medium-fg: #fde68a;
+  --color-low: #38bdf8;
+  --color-low-soft: #0c2233;
+  --color-low-fg: #bae6fd;
+
+  --color-success: #4ade80;
+  --color-success-soft: #0f2a1a;
+  --color-success-fg: #bbf7d0;
+  --color-warning: #facc15;
+  --color-warning-soft: #302807;
+  --color-warning-fg: #fef08a;
+  --color-danger: #fb7185;
+  --color-danger-soft: #3a0f1a;
+  --color-danger-fg: #fecdd3;
+  --color-info: #60a5fa;
+  --color-info-soft: #0f1f3d;
+  --color-info-fg: #bfdbfe;
+  --color-neutral: #94a3b8;
+  --color-neutral-soft: #1e293b;
+  --color-neutral-fg: #e2e8f0;
+
+  --color-new: #a78bfa;
+  --color-new-soft: #221540;
+  --color-new-fg: #ddd6fe;
+  --color-accepted-risk: #e879f9;
+  --color-accepted-risk-soft: #2e1033;
+  --color-accepted-risk-fg: #f5d0fe;
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
 }
 
 html,
 body {
-  @apply bg-white dark:bg-gray-950;
-
-  @media (prefers-color-scheme: dark) {
-    color-scheme: dark;
-  }
+  @apply bg-surface text-text;
 }
