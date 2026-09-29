@@ -1,7 +1,7 @@
 ---
 change_id: ui-opt
 title: Poprawki graficzne
-status: implementing
+status: implemented
 created: 2026-09-29
 updated: 2026-09-29
 archived_at: null

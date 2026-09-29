@@ -276,9 +276,9 @@ Brak danych do migracji. `patternCountLabel` zmienia lokalizację (z `home.tsx` 
 
 #### Automated
 
-- [x] 4.1 Typecheck przechodzi: `npm run typecheck`
-- [x] 4.2 `AGENTS.md` wskazuje nowe komponenty: wyszukanie `PageHeading` w `AGENTS.md` zwraca trafienie
+- [x] 4.1 Typecheck przechodzi: `npm run typecheck` — d781a65
+- [x] 4.2 `AGENTS.md` wskazuje nowe komponenty: wyszukanie `PageHeading` w `AGENTS.md` zwraca trafienie — d781a65
 
 #### Manual
 
-- [x] 4.3 Reguła w `AGENTS.md` jest zgodna z rzeczywistym stanem kodu
+- [x] 4.3 Reguła w `AGENTS.md` jest zgodna z rzeczywistym stanem kodu — d781a65
