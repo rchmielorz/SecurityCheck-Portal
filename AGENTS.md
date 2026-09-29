@@ -36,11 +36,18 @@ SecurityCheck Portal is an internal tool that scans dependencies of customer-dep
 
 - Design tokens live only in `web/app/app.css`: `@theme static` holds the light values, `.dark` overrides the same variable names. Palette from the tweakcn "qrafthive" theme; primary is darkened (`#ba5c1f`) to reach AA with white text. Use semantic tokens (`bg-surface`, `text-text-muted`, `bg-primary`, `text-danger-fg`, …), not raw `gray-*`/`blue-*`/`red-*` utilities or hex values.
 - Dark mode is a `dark` class on `<html>`; the `dark:` variant is class-based (`@custom-variant` in `app.css`). An inline script in `web/app/root.tsx` sets the class before first paint; `ThemeToggle` cycles system → light → dark and stores it in `localStorage` key `theme` (`system` = key removed).
-- Shared UI is in `web/app/components/` (`Button`, `Field`/`Input`, `Card`, `Alert`, `Badge`, `ConfirmDialog`, `ThemeToggle`, `BrandMark`, plus `styles.ts` with `focusRing`, `linkClass`, `cx`). Use them; do not copy Tailwind class strings between routes. If a pattern repeats, add or extend a shared component and show it on `/styleguide`.
+- Shared UI is in `web/app/components/` (`Button`, `Field`/`Input`, `Card`, `Alert`, `Badge`, `ConfirmDialog`, `ThemeToggle`, `BrandMark`, `PageHeading`, `SectionHeading`, `RepositoryList`, plus `styles.ts` with `focusRing`, `linkClass`, `cx`). Use them; do not copy Tailwind class strings between routes. If a pattern repeats, add or extend a shared component and show it on `/styleguide`.
+- Page and section titles go through `PageHeading` (h1, optional `action` slot) and `SectionHeading` (h2), never hand-written `text-2xl` / `text-lg font-semibold` classes. A page has exactly one visible h1.
+- The repository list is rendered only via `RepositoryList`; it owns the empty state, the pattern-count `Badge` (warning when a repository has no active patterns) and the chevron.
+- After any visual change, scan the changed view/component files for hard-coded values (`grep -nE '<regex>' <files>`) and expect 0 matches:
+  ```
+  #[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(|oklch\(|-\[[0-9.]+(px|rem)\]|\b(bg|text|border|ring|outline|from|via|to|fill|stroke|shadow|divide)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)\b
+  ```
 - Severity and status (critical/high/medium/low, success/warning/danger/info/neutral/new/accepted-risk) are rendered with `Badge` (text + icon); colour must never be the only cue. Inline messages use `Alert`.
 - Destructive actions use `ConfirmDialog`, not `window.confirm`.
 - Every new colour token needs a light and a `.dark` value and must reach WCAG AA (4.5:1 text on its background); add the pair to `PAIRS` in `web/app/routes/styleguide.tsx` and check it in both themes.
 - `/styleguide` (token swatches, contrast table, component gallery) is registered in `web/app/routes.ts` only when `NODE_ENV !== "production"`, so it exists under `npm run dev` and not in the build. It shows no application data.
+- New shared components and view states (empty, one item, many, long values) get a gallery section on `/styleguide` with sample data, because the real views need LDAP and a database and cannot be rendered without them.
 - UI text is Polish and hard-coded (no i18n). System font stack only (`--font-sans`); no external fonts, icon sets or CDN assets, and no new UI dependencies for styling.
 
 ## Testing

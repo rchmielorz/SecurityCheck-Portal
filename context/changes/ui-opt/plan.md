@@ -261,24 +261,24 @@ Brak danych do migracji. `patternCountLabel` zmienia lokalizację (z `home.tsx` 
 
 #### Automated
 
-- [x] 3.1 Typecheck przechodzi: `npm run typecheck`
-- [x] 3.2 Build przechodzi: `npm run build`
-- [x] 3.3 Brak twardych wartości w plikach zmiany: skan na `home.tsx`, `headings.tsx`, `repository-list.tsx` daje 0 w każdym pliku
+- [x] 3.1 Typecheck przechodzi: `npm run typecheck` — ee17a58
+- [x] 3.2 Build przechodzi: `npm run build` — ee17a58
+- [x] 3.3 Brak twardych wartości w plikach zmiany: skan na `home.tsx`, `headings.tsx`, `repository-list.tsx` daje 0 w każdym pliku — ee17a58
 
 #### Manual
 
-- [x] 3.4 Zrzuty `/styleguide` (desktop i jedna szerokość mobilna) w jasnym motywie przejrzane i zaakceptowane
-- [x] 3.5 Zrzuty w ciemnym motywie przejrzane i zaakceptowane
-- [x] 3.6 Nawigacja klawiaturą: fokus jest widoczny na wierszu listy, linku „Dodaj repozytorium”, polach i przycisku „Dodaj”
-- [x] 3.7 Macierz stanów: hover, focus-visible, disabled, error i empty pokazane, loading oznaczone N/A z uzasadnieniem
+- [x] 3.4 Zrzuty `/styleguide` (desktop i jedna szerokość mobilna) w jasnym motywie przejrzane i zaakceptowane — ee17a58
+- [x] 3.5 Zrzuty w ciemnym motywie przejrzane i zaakceptowane — ee17a58
+- [x] 3.6 Nawigacja klawiaturą: fokus jest widoczny na wierszu listy, linku „Dodaj repozytorium”, polach i przycisku „Dodaj” — ee17a58
+- [x] 3.7 Macierz stanów: hover, focus-visible, disabled, error i empty pokazane, loading oznaczone N/A z uzasadnieniem — ee17a58
 
 ### Phase 4: Reguła dla agentów
 
 #### Automated
 
-- [ ] 4.1 Typecheck przechodzi: `npm run typecheck`
-- [ ] 4.2 `AGENTS.md` wskazuje nowe komponenty: wyszukanie `PageHeading` w `AGENTS.md` zwraca trafienie
+- [x] 4.1 Typecheck przechodzi: `npm run typecheck`
+- [x] 4.2 `AGENTS.md` wskazuje nowe komponenty: wyszukanie `PageHeading` w `AGENTS.md` zwraca trafienie
 
 #### Manual
 
-- [ ] 4.3 Reguła w `AGENTS.md` jest zgodna z rzeczywistym stanem kodu
+- [x] 4.3 Reguła w `AGENTS.md` jest zgodna z rzeczywistym stanem kodu
