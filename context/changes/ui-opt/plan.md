@@ -246,31 +246,31 @@ Brak danych do migracji. `patternCountLabel` zmienia lokalizację (z `home.tsx` 
 
 #### Automated
 
-- [x] 2.1 Typecheck przechodzi: `npm run typecheck`
-- [x] 2.2 Build przechodzi: `npm run build`
-- [x] 2.3 Brak twardych wartości w plikach zmiany: skan na `home.tsx`, `headings.tsx` i `repository-list.tsx` daje 0 w każdym pliku
-- [x] 2.4 Brak ukrytego nagłówka w widoku: wyszukanie `sr-only` w `web/app/routes/home.tsx` nie zwraca trafień
+- [x] 2.1 Typecheck przechodzi: `npm run typecheck` — 33a5185
+- [x] 2.2 Build przechodzi: `npm run build` — 33a5185
+- [x] 2.3 Brak twardych wartości w plikach zmiany: skan na `home.tsx`, `headings.tsx` i `repository-list.tsx` daje 0 w każdym pliku — 33a5185
+- [x] 2.4 Brak ukrytego nagłówka w widoku: wyszukanie `sr-only` w `web/app/routes/home.tsx` nie zwraca trafień — 33a5185
 
 #### Manual
 
-- [x] 2.5 Po zalogowaniu widać tytuł „Repozytoria”, listę, a pod nią kartę „Dodaj repozytorium”
-- [x] 2.6 Dodanie repozytorium działa jak dotąd (przekierowanie do szczegółów, komunikat błędu przy złym adresie i duplikacie)
-- [x] 2.7 Link „Dodaj repozytorium” przewija do formularza
+- [x] 2.5 Po zalogowaniu widać tytuł „Repozytoria”, listę, a pod nią kartę „Dodaj repozytorium” — 33a5185
+- [x] 2.6 Dodanie repozytorium działa jak dotąd (przekierowanie do szczegółów, komunikat błędu przy złym adresie i duplikacie) — 33a5185
+- [x] 2.7 Link „Dodaj repozytorium” przewija do formularza — 33a5185
 
 ### Phase 3: Stany i bramka wizualna
 
 #### Automated
 
-- [ ] 3.1 Typecheck przechodzi: `npm run typecheck`
-- [ ] 3.2 Build przechodzi: `npm run build`
-- [ ] 3.3 Brak twardych wartości w plikach zmiany: skan na `home.tsx`, `headings.tsx`, `repository-list.tsx` daje 0 w każdym pliku
+- [x] 3.1 Typecheck przechodzi: `npm run typecheck`
+- [x] 3.2 Build przechodzi: `npm run build`
+- [x] 3.3 Brak twardych wartości w plikach zmiany: skan na `home.tsx`, `headings.tsx`, `repository-list.tsx` daje 0 w każdym pliku
 
 #### Manual
 
-- [ ] 3.4 Zrzuty `/styleguide` (desktop i jedna szerokość mobilna) w jasnym motywie przejrzane i zaakceptowane
-- [ ] 3.5 Zrzuty w ciemnym motywie przejrzane i zaakceptowane
-- [ ] 3.6 Nawigacja klawiaturą: fokus jest widoczny na wierszu listy, linku „Dodaj repozytorium”, polach i przycisku „Dodaj”
-- [ ] 3.7 Macierz stanów: hover, focus-visible, disabled, error i empty pokazane, loading oznaczone N/A z uzasadnieniem
+- [x] 3.4 Zrzuty `/styleguide` (desktop i jedna szerokość mobilna) w jasnym motywie przejrzane i zaakceptowane
+- [x] 3.5 Zrzuty w ciemnym motywie przejrzane i zaakceptowane
+- [x] 3.6 Nawigacja klawiaturą: fokus jest widoczny na wierszu listy, linku „Dodaj repozytorium”, polach i przycisku „Dodaj”
+- [x] 3.7 Macierz stanów: hover, focus-visible, disabled, error i empty pokazane, loading oznaczone N/A z uzasadnieniem
 
 ### Phase 4: Reguła dla agentów
 
