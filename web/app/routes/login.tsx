@@ -1,6 +1,12 @@
 import { Form, redirect, replace, useNavigation, useSearchParams } from "react-router";
 
 import type { Route } from "./+types/login";
+import { Alert } from "../components/alert";
+import { BrandMark } from "../components/brand-mark";
+import { Button } from "../components/button";
+import { Card } from "../components/card";
+import { Field, Input } from "../components/field";
+import { ThemeToggle } from "../components/theme-toggle";
 import { apiFetch, safeNext } from "../lib/api";
 
 const ERROR_MESSAGES: Record<number, string> = {
@@ -64,49 +70,28 @@ export default function Login({ actionData }: Route.ComponentProps) {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-2xl border border-gray-200 p-8 shadow-sm dark:border-gray-800">
-        <h1 className="mb-6 text-center text-2xl font-semibold">SecurityCheck Portal</h1>
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
+      <Card className="w-full max-w-sm p-8">
+        <h1 className="mb-6 flex items-center justify-center gap-2 text-center text-2xl font-semibold">
+          <BrandMark size={28} className="text-primary" />
+          <span>SecurityCheck Portal</span>
+        </h1>
         <Form method="post" className="space-y-4" noValidate>
           {next !== null && <input type="hidden" name="next" value={next} />}
-          <div className="space-y-1">
-            <label htmlFor="userName" className="block text-sm font-medium">
-              Login
-            </label>
-            <input
-              id="userName"
-              name="userName"
-              type="text"
-              autoComplete="username"
-              autoFocus
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
-            />
-          </div>
-          <div className="space-y-1">
-            <label htmlFor="password" className="block text-sm font-medium">
-              Hasło
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
-            />
-          </div>
-          {actionData?.error && (
-            <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-              {actionData.error}
-            </p>
-          )}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-          >
+          <Field label="Login">
+            {(control) => <Input name="userName" type="text" autoComplete="username" autoFocus {...control} />}
+          </Field>
+          <Field label="Hasło">
+            {(control) => <Input name="password" type="password" autoComplete="current-password" {...control} />}
+          </Field>
+          {actionData?.error && <Alert>{actionData.error}</Alert>}
+          <Button type="submit" disabled={submitting} className="w-full">
             Zaloguj
-          </button>
+          </Button>
         </Form>
-      </div>
+      </Card>
     </main>
   );
 }

@@ -10,3 +10,7 @@ export const inputBase =
 export function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
 }
+
+// Plain text link (brand link, "back home" links). Includes the focus ring.
+export const linkClass =
+  "text-primary-text underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";

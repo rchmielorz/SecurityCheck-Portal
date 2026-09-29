@@ -8,7 +8,13 @@ import {
 } from "react-router";
 
 import type { Route } from "./+types/root";
+import { Card } from "./components/card";
+import { linkClass } from "./components/styles";
 import "./app.css";
+
+export const links: Route.LinksFunction = () => [
+  { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+];
 
 // Stored `theme` ∈ system | light | dark; missing/invalid/blocked storage = system.
 const THEME_INIT_SCRIPT = `(function(){var m=null;try{m=localStorage.getItem("theme")}catch(e){}var d=m==="dark"||(m!=="light"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d)})();`;
@@ -42,7 +48,8 @@ export default function App() {
 export function HydrateFallback() {
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
-      <p className="text-gray-600 dark:text-gray-300">Ładowanie…</p>
+      <title>Ładowanie… – SecurityCheck Portal</title>
+      <p className="text-text-muted">Ładowanie…</p>
     </main>
   );
 }
@@ -60,13 +67,19 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   }
 
   return (
-    <main className="pt-16 p-4 container mx-auto">
-      <h1 className="text-2xl font-semibold">{message}</h1>
-      {stack && (
-        <pre className="mt-4 w-full p-4 overflow-x-auto">
-          <code>{stack}</code>
-        </pre>
-      )}
+    <main className="flex min-h-screen items-center justify-center p-4">
+      <title>{`${message} – SecurityCheck Portal`}</title>
+      <Card className="w-full max-w-2xl space-y-3">
+        <h1 className="text-2xl font-semibold">{message}</h1>
+        {stack && (
+          <pre className="w-full overflow-x-auto rounded-lg bg-surface-muted p-4 text-sm">
+            <code>{stack}</code>
+          </pre>
+        )}
+        <a href="/" className={linkClass}>
+          Wróć na stronę główną
+        </a>
+      </Card>
     </main>
   );
 }

@@ -1,7 +1,12 @@
 import { useState } from "react";
-import { Outlet, useNavigate } from "react-router";
+import { Link, Outlet, useNavigate } from "react-router";
 
 import type { Route } from "./+types/app-layout";
+import { Alert } from "../components/alert";
+import { BrandMark } from "../components/brand-mark";
+import { Button } from "../components/button";
+import { cx, focusRing } from "../components/styles";
+import { ThemeToggle } from "../components/theme-toggle";
 import { apiFetch, requireUser } from "../lib/api";
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
@@ -50,24 +55,22 @@ export default function AppLayout({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-gray-200 dark:border-gray-800">
-        <div className="container mx-auto flex items-center justify-between gap-4 p-4">
-          <span className="text-lg font-semibold">SecurityCheck Portal</span>
-          <div className="flex items-center gap-4">
-            {logoutFailed && (
-              <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-                Nie udało się wylogować. Spróbuj ponownie.
-              </p>
-            )}
-            <span className="text-sm text-gray-700 dark:text-gray-300">{user.displayName}</span>
-            <button
-              type="button"
-              onClick={logout}
-              disabled={loggingOut}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium hover:bg-gray-100 disabled:opacity-60 dark:border-gray-700 dark:hover:bg-gray-900"
-            >
+      <header className="border-b border-border-subtle">
+        <div className="container mx-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-4">
+          <Link
+            to="/"
+            className={cx("inline-flex items-center gap-2 rounded-lg text-lg font-semibold text-text", focusRing)}
+          >
+            <BrandMark className="text-primary" />
+            <span>SecurityCheck Portal</span>
+          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            {logoutFailed && <Alert>Nie udało się wylogować. Spróbuj ponownie.</Alert>}
+            <span className="text-sm text-text-muted">{user.displayName}</span>
+            <ThemeToggle />
+            <Button variant="secondary" onClick={logout} disabled={loggingOut}>
               Wyloguj
-            </button>
+            </Button>
           </div>
         </div>
       </header>
