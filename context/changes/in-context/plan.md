@@ -356,9 +356,9 @@ Brak danych do migracji. Wartość `theme` w `localStorage` jest nowa; brak wpis
 
 #### Automated
 
-- [x] 5.1 Typecheck przechodzi: `npm run typecheck`
-- [x] 5.2 `AGENTS.md` zawiera sekcję UI: wyszukanie `styleguide` w `AGENTS.md` zwraca trafienie
+- [x] 5.1 Typecheck przechodzi: `npm run typecheck` — 76813f4
+- [x] 5.2 `AGENTS.md` zawiera sekcję UI: wyszukanie `styleguide` w `AGENTS.md` zwraca trafienie — 76813f4
 
 #### Manual
 
-- [x] 5.3 `AGENTS.md` i `web/README.md` są zgodne z rzeczywistym stanem kodu i nie zawierają starego tekstu szablonu
+- [x] 5.3 `AGENTS.md` i `web/README.md` są zgodne z rzeczywistym stanem kodu i nie zawierają starego tekstu szablonu — 76813f4
