@@ -1,10 +1,10 @@
 ---
 change_id: repo-version-pattern
 title: Dodanie repozytorium i wzorca wersji z podglądem rozwiązanej wersji
-status: impl_reviewed
+status: archived
 created: 2026-09-26
-updated: 2026-09-28
-archived_at: null
+updated: 2026-09-29
+archived_at: 2026-09-29T17:14:47Z
 ---
 
 ## Notes

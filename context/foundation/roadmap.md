@@ -3,7 +3,7 @@ project: SecurityCheck Portal
 version: 1
 status: draft                    # draft | active | locked
 created: 2026-09-26
-updated: 2026-09-28
+updated: 2026-09-29
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -44,7 +44,7 @@ Zespół maintenance nie sprawdza regularnie podatności w bibliotekach starszyc
 | ---- | ----- | ---------------------- | ------------------------------------------------------------------------------------ | ------------- | --------------------------------- | -------- |
 | F-01 | [#1](https://github.com/rchmielorz/SecurityCheck-Portal/issues/1) | authenticated-app-shell | (foundation) każda strona i endpoint wymagają zalogowania; UI i API działają pod jednym originem | —             | NFR, Access Control, FR-001       | done |
 | F-02 | [#2](https://github.com/rchmielorz/SecurityCheck-Portal/issues/2) | deploy-skeleton        | (foundation) merge do `main` buduje, sprawdza i wdraża portal na serwer docelowy     | F-01, przygotowany serwer | NFR, Access Control               | proposed |
-| S-01 | [#3](https://github.com/rchmielorz/SecurityCheck-Portal/issues/3) | repo-version-pattern   | zalogować się, dodać repozytorium i wzorzec wersji oraz zobaczyć, na jaką wersję wzorzec się rozwiązuje | F-01          | FR-001, FR-002, FR-003            | in-progress |
+| S-01 | [#3](https://github.com/rchmielorz/SecurityCheck-Portal/issues/3) | repo-version-pattern   | zalogować się, dodać repozytorium i wzorzec wersji oraz zobaczyć, na jaką wersję wzorzec się rozwiązuje | F-01          | FR-001, FR-002, FR-003            | done |
 | S-02 | [#4](https://github.com/rchmielorz/SecurityCheck-Portal/issues/4) | manual-version-scan    | ręcznie uruchomić skan wersji i zobaczyć podatności posortowane wg istotności albo jawne „brak wyników” | S-01          | US-01, FR-004, FR-006             | proposed |
 | S-03 | [#5](https://github.com/rchmielorz/SecurityCheck-Portal/issues/5) | scan-history           | przejrzeć historię poprzednich skanów danej wersji i trend liczby/poziomu podatności | S-02          | FR-007                            | proposed |
 | S-04 | [#6](https://github.com/rchmielorz/SecurityCheck-Portal/issues/6) | accepted-risk-triage   | oznaczyć podatność jako zaakceptowane ryzyko z komentarzem i odfiltrować takie pozycje w kolejnych skanach | S-02          | FR-008, FR-006, Business Logic    | proposed |
@@ -116,7 +116,7 @@ Fundamenty poniżej zakładają ten stan i nie tworzą ponownie tego, co istniej
   - Jak wzorzec mapuje się na repozytorium: tagi (np. `v2.1.7`) czy gałęzie hotfixowe, i czy wybieramy najwyższy pasujący numer? — Owner: user. Block: no (do rozstrzygnięcia w `/10x-plan`). — rozstrzygnięte 2026-09-28: tagi `X.Y.N` bez prefiksu, najwyższy hotfix numerycznie (plan `repo-version-pattern`).
   - Jakie poświadczenia portal używa do dostępu do repozytoriów w sieci wewnętrznej? — Owner: team. Block: no. — rozstrzygnięte 2026-09-28: HTTPS + PAT tylko do odczytu do firmowego GitLaba (`gitlab-do.coig.app`, adresy kanoniczne z `.git`), używany przez API i worker (plan `repo-version-pattern`).
 - **Risk:** Wydzielony przed skanem, bo poprawne rozwiązanie wzorca to warunek wiarygodności całego wyniku (Guardrail: „nie na złej wersji/branchu”); widoczne rozwiązanie wzorca pozwala to sprawdzić przed podłączeniem skanera.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-02: Ręczny skan wersji i lista podatności
 
@@ -199,3 +199,4 @@ Fundamenty poniżej zakładają ten stan i nie tworzą ponownie tego, co istniej
 ## Done
 
 - **F-01: (foundation) szablon API usunięty; UI serwowane pod tym samym originem co API; każda trasa UI i każdy endpoint API odrzuca niezalogowanego użytkownika, a zalogowany widzi pustą powłokę portalu ze swoją tożsamością.** — Archived 2026-09-27 → `context/archive/2026-09-26-authenticated-app-shell/`. Lesson: —.
+- **S-01: użytkownik może zalogować się, dodać repozytorium Git i wzorzec wersji (np. `2.1.*`) oraz zobaczyć, na jaką konkretną wersję wzorzec się obecnie rozwiązuje.** — Archived 2026-09-29 → `context/archive/2026-09-26-repo-version-pattern/`. Lesson: —.
