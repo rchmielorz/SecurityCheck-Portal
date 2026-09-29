@@ -305,8 +305,8 @@ Brak danych do migracji. Wartość `theme` w `localStorage` jest nowa; brak wpis
 
 #### Manual
 
-- [ ] 1.3 Przełącznik przechodzi system, jasny, ciemny, a wybór zostaje po przeładowaniu strony bez błysku złego motywu
-- [ ] 1.4 Bez zapisanego wyboru aplikacja przy ciemnym motywie systemu jest ciemna, a przy jasnym jasna
+- [x] 1.3 Przełącznik przechodzi system, jasny, ciemny, a wybór zostaje po przeładowaniu strony bez błysku złego motywu — b997169
+- [x] 1.4 Bez zapisanego wyboru aplikacja przy ciemnym motywie systemu jest ciemna, a przy jasnym jasna — b997169
 
 ### Phase 2: Komponenty wspólne i styleguide
 
@@ -318,39 +318,39 @@ Brak danych do migracji. Wartość `theme` w `localStorage` jest nowa; brak wpis
 
 #### Manual
 
-- [ ] 2.4 `/styleguide` (dev) pokazuje paletę i wszystkie komponenty w jasnym i ciemnym motywie
-- [ ] 2.5 Paleta została przedstawiona z kontrastami AA i zatwierdzona przez użytkownika
-- [ ] 2.6 Każdy element interaktywny ma widoczny fokus przy nawigacji klawiaturą
-- [ ] 2.7 `ConfirmDialog` zamyka się Esc, a fokus wraca do przycisku wywołującego
+- [x] 2.4 `/styleguide` (dev) pokazuje paletę i wszystkie komponenty w jasnym i ciemnym motywie — 727473b
+- [x] 2.5 Paleta została przedstawiona z kontrastami AA i zatwierdzona przez użytkownika — 727473b
+- [x] 2.6 Każdy element interaktywny ma widoczny fokus przy nawigacji klawiaturą — 727473b
+- [x] 2.7 `ConfirmDialog` zamyka się Esc, a fokus wraca do przycisku wywołującego — 727473b
 
 ### Phase 3: Powłoka i ekrany bazowe
 
 #### Automated
 
-- [x] 3.1 Typecheck przechodzi: `npm run typecheck`
-- [x] 3.2 Build przechodzi: `npm run build`
+- [x] 3.1 Typecheck przechodzi: `npm run typecheck` — fccf29a
+- [x] 3.2 Build przechodzi: `npm run build` — fccf29a
 
 #### Manual
 
-- [ ] 3.3 Nagłówek pokazuje znak i nazwę jako link do strony głównej oraz przełącznik motywu, a na wąskim ekranie nie przepełnia się
-- [ ] 3.4 Login, ekran ładowania, błąd i 404 mają nowy wygląd w obu motywach, a 404 i błąd mają link powrotu
-- [ ] 3.5 Karta przeglądarki pokazuje nowy favicon
+- [x] 3.3 Nagłówek pokazuje znak i nazwę jako link do strony głównej oraz przełącznik motywu, a na wąskim ekranie nie przepełnia się — fccf29a
+- [x] 3.4 Login, ekran ładowania, błąd i 404 mają nowy wygląd w obu motywach, a 404 i błąd mają link powrotu — fccf29a
+- [x] 3.5 Karta przeglądarki pokazuje nowy favicon — fccf29a
 
 ### Phase 4: Migracja ekranów
 
 #### Automated
 
-- [ ] 4.1 Typecheck przechodzi: `npm run typecheck`
-- [ ] 4.2 Build przechodzi: `npm run build`
-- [ ] 4.3 Brak `window.confirm` w kodzie: wyszukanie `window.confirm` w `web/app` nie zwraca trafień
-- [ ] 4.4 Brak skopiowanego stylu przycisku głównego poza komponentami: wyszukanie `bg-blue-600` w `web/app/routes` nie zwraca trafień
+- [x] 4.1 Typecheck przechodzi: `npm run typecheck`
+- [x] 4.2 Build przechodzi: `npm run build`
+- [x] 4.3 Brak `window.confirm` w kodzie: wyszukanie `window.confirm` w `web/app` nie zwraca trafień
+- [x] 4.4 Brak skopiowanego stylu przycisku głównego poza komponentami: wyszukanie `bg-blue-600` w `web/app/routes` nie zwraca trafień
 
 #### Manual
 
-- [ ] 4.5 Dodanie i lista repozytoriów działają jak dotąd, w obu motywach
-- [ ] 4.6 Dodanie, sprawdzenie, dezaktywacja i usunięcie wzorca działają, a usunięcie pyta w oknie dialogowym (Esc anuluje)
-- [ ] 4.7 Każdy stan dopasowania jest rozpoznawalny po tekście i ikonie, nie tylko po kolorze
-- [ ] 4.8 Błędy formularzy są powiązane z polami (`aria-invalid`, `aria-describedby`) i ogłaszane
+- [x] 4.5 Dodanie i lista repozytoriów działają jak dotąd, w obu motywach
+- [x] 4.6 Dodanie, sprawdzenie, dezaktywacja i usunięcie wzorca działają, a usunięcie pyta w oknie dialogowym (Esc anuluje)
+- [x] 4.7 Każdy stan dopasowania jest rozpoznawalny po tekście i ikonie, nie tylko po kolorze
+- [x] 4.8 Błędy formularzy są powiązane z polami (`aria-invalid`, `aria-describedby`) i ogłaszane
 
 ### Phase 5: Dokumentacja
 

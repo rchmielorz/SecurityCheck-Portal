@@ -1,5 +1,7 @@
 /** Shapes of the /api/repos and /api/patterns responses (api/Repositories/RepositoryContracts.cs). */
 
+import type { BadgeKind } from "../components/badge";
+
 export type RepositorySummary = {
   id: number;
   url: string;
@@ -102,6 +104,27 @@ export function describeResolution(pattern: VersionPattern): ResolutionView {
       return { text: "Nie udało się sprawdzić (serwer Git niedostępny lub przekroczony czas)", checkedAt };
     default:
       return { text: "Nie sprawdzono" };
+  }
+}
+
+export type ResolutionBadge = { kind: BadgeKind; label: string };
+
+/** Badge (kind + label) for the last resolution of a pattern; text and icon, not color alone. */
+export function resolutionBadge(pattern: VersionPattern): ResolutionBadge {
+  const resolution = pattern.lastResolution;
+  if (!resolution) return { kind: "neutral", label: "Nie sprawdzono" };
+
+  switch (resolution.state) {
+    case "Resolved":
+      return { kind: "success", label: "Dopasowano" };
+    case "NoMatch":
+      return { kind: "neutral", label: "Brak dopasowania" };
+    case "Ambiguous":
+      return { kind: "warning", label: "Niejednoznaczne" };
+    case "Error":
+      return { kind: "danger", label: "Błąd sprawdzenia" };
+    default:
+      return { kind: "neutral", label: "Nie sprawdzono" };
   }
 }
 

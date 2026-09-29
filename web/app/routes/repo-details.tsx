@@ -1,13 +1,20 @@
-import { useEffect, useRef } from "react";
-import { data, Form, Link, redirect, useNavigation, useSearchParams } from "react-router";
+import { useEffect, useRef, useState } from "react";
+import { data, Form, Link, redirect, useNavigation, useSearchParams, useSubmit } from "react-router";
 
 import type { Route } from "./+types/repo-details";
+import { Alert } from "../components/alert";
+import { Badge } from "../components/badge";
+import { Button } from "../components/button";
+import { ConfirmDialog } from "../components/confirm-dialog";
+import { Field, Input } from "../components/field";
+import { linkClass } from "../components/styles";
 import { apiFetch } from "../lib/api";
 import {
   describeEvent,
   describeResolution,
   formatDateTime,
   repositoryDisplayName,
+  resolutionBadge,
   type AuditEvent,
   type RepositoryDetails,
   type VersionPattern,
@@ -134,19 +141,24 @@ export async function clientAction({ params, request }: Route.ClientActionArgs):
   return { intent, error: await errorMessage(intent, response) };
 }
 
-function confirmSubmit(message: string) {
-  return (event: React.FormEvent<HTMLFormElement>) => {
-    if (!window.confirm(message)) event.preventDefault();
-  };
-}
+type PendingDelete = {
+  intent: "deletePattern" | "deleteRepo";
+  patternId?: number;
+  title: string;
+  description: string;
+};
 
-const secondaryButton =
-  "rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium hover:bg-gray-100 disabled:opacity-60 dark:border-gray-700 dark:hover:bg-gray-900";
-const dangerButton =
-  "rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-60 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950";
-
-function PatternRow({ pattern, busy }: { pattern: VersionPattern; busy: string | null }) {
+function PatternRow({
+  pattern,
+  busy,
+  onRequestDelete,
+}: {
+  pattern: VersionPattern;
+  busy: string | null;
+  onRequestDelete: (pending: PendingDelete) => void;
+}) {
   const result = describeResolution(pattern);
+  const badge = resolutionBadge(pattern);
   const isBusy = (intent: Intent) => busy === `${intent}:${pattern.id}`;
   const disabled = busy !== null;
 
@@ -155,47 +167,56 @@ function PatternRow({ pattern, busy }: { pattern: VersionPattern; busy: string |
       <div className="min-w-0 space-y-1">
         <div className="flex items-center gap-2">
           <span className="font-mono font-medium">{pattern.pattern}</span>
-          {!pattern.isActive && (
-            <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-              nieaktywny
-            </span>
-          )}
+          {!pattern.isActive && <Badge kind="neutral">nieaktywny</Badge>}
         </div>
-        <p className="text-sm" title={result.title}>
-          {result.text}
-        </p>
-        {result.checkedAt && <p className="text-xs text-gray-600 dark:text-gray-400">{result.checkedAt}</p>}
+        <div aria-live="polite" className="flex flex-wrap items-center gap-2 text-sm">
+          <Badge kind={badge.kind}>{badge.label}</Badge>
+          <span title={result.title}>
+            {result.text}
+            {result.title && <span className="sr-only"> (pełny commit: {result.title})</span>}
+          </span>
+          {isBusy("resolve") && <span className="text-text-muted">Sprawdzanie…</span>}
+        </div>
+        {result.checkedAt && <p className="text-xs text-text-muted">{result.checkedAt}</p>}
       </div>
       <div className="flex flex-wrap gap-2">
         {pattern.isActive ? (
           <>
             <Form method="post">
               <input type="hidden" name="patternId" value={pattern.id} />
-              <button type="submit" name="intent" value="resolve" disabled={disabled} className={secondaryButton}>
+              <Button type="submit" variant="secondary" name="intent" value="resolve" disabled={disabled}>
                 {isBusy("resolve") ? "Sprawdzanie…" : "Sprawdź"}
-              </button>
+              </Button>
             </Form>
             <Form method="post">
               <input type="hidden" name="patternId" value={pattern.id} />
-              <button type="submit" name="intent" value="deactivate" disabled={disabled} className={secondaryButton}>
+              <Button type="submit" variant="secondary" name="intent" value="deactivate" disabled={disabled}>
                 Dezaktywuj
-              </button>
+              </Button>
             </Form>
           </>
         ) : (
           <Form method="post">
             <input type="hidden" name="patternId" value={pattern.id} />
-            <button type="submit" name="intent" value="activate" disabled={disabled} className={secondaryButton}>
+            <Button type="submit" variant="secondary" name="intent" value="activate" disabled={disabled}>
               Aktywuj
-            </button>
+            </Button>
           </Form>
         )}
-        <Form method="post" onSubmit={confirmSubmit(`Usunąć wzorzec ${pattern.pattern}?`)}>
-          <input type="hidden" name="patternId" value={pattern.id} />
-          <button type="submit" name="intent" value="deletePattern" disabled={disabled} className={dangerButton}>
-            Usuń
-          </button>
-        </Form>
+        <Button
+          variant="danger"
+          disabled={disabled}
+          onClick={() =>
+            onRequestDelete({
+              intent: "deletePattern",
+              patternId: pattern.id,
+              title: `Usunąć wzorzec ${pattern.pattern}?`,
+              description: "Wzorzec zostanie trwale usunięty z repozytorium.",
+            })
+          }
+        >
+          Usuń
+        </Button>
       </div>
     </li>
   );
@@ -205,7 +226,11 @@ export default function RepoDetails({ loaderData, actionData }: Route.ComponentP
   const { repository, events } = loaderData;
   const [searchParams] = useSearchParams();
   const navigation = useNavigation();
+  const submit = useSubmit();
   const addPatternForm = useRef<HTMLFormElement>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+  // Keep the last dialog texts while the dialog closes.
+  const [dialogTexts, setDialogTexts] = useState({ title: "", description: "" });
 
   const showInactive = searchParams.get(SHOW_INACTIVE_PARAM) === "1";
   const inactiveCount = repository.patterns.filter((p) => !p.isActive).length;
@@ -226,6 +251,20 @@ export default function RepoDetails({ loaderData, actionData }: Route.ComponentP
     }
   }, [actionData]);
 
+  function requestDelete(pending: PendingDelete) {
+    setDialogTexts({ title: pending.title, description: pending.description });
+    setPendingDelete(pending);
+  }
+
+  function confirmDelete() {
+    const pending = pendingDelete;
+    setPendingDelete(null);
+    if (!pending) return;
+    const fields: Record<string, string> = { intent: pending.intent };
+    if (pending.patternId !== undefined) fields.patternId = String(pending.patternId);
+    submit(fields, { method: "post" });
+  }
+
   const toggleParams = new URLSearchParams(searchParams);
   if (showInactive) toggleParams.delete(SHOW_INACTIVE_PARAM);
   else toggleParams.set(SHOW_INACTIVE_PARAM, "1");
@@ -234,102 +273,78 @@ export default function RepoDetails({ loaderData, actionData }: Route.ComponentP
   return (
     <main className="container mx-auto space-y-8 p-4">
       <div>
-        <Link to="/" className="text-sm text-blue-700 hover:underline dark:text-blue-400">
+        <Link to="/" className={`text-sm ${linkClass}`}>
           ← Repozytoria
         </Link>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold">{repositoryDisplayName(repository)}</h1>
-            <p className="break-all text-sm text-gray-600 dark:text-gray-400">{repository.url}</p>
-            <p className="text-xs text-gray-600 dark:text-gray-400">
+            <p className="break-all text-sm text-text-muted">{repository.url}</p>
+            <p className="text-xs text-text-muted">
               Dodano {formatDateTime(repository.createdAt)} przez {repository.createdBy}
             </p>
           </div>
-          <Form
-            method="post"
-            onSubmit={confirmSubmit(`Usunąć repozytorium ${repositoryDisplayName(repository)}?`)}
+          <Button
+            variant="danger"
+            disabled={submitting}
+            onClick={() =>
+              requestDelete({
+                intent: "deleteRepo",
+                title: `Usunąć repozytorium ${repositoryDisplayName(repository)}?`,
+                description: "Repozytorium zostanie trwale usunięte.",
+              })
+            }
           >
-            <button type="submit" name="intent" value="deleteRepo" disabled={submitting} className={dangerButton}>
-              Usuń repozytorium
-            </button>
-          </Form>
+            Usuń repozytorium
+          </Button>
         </div>
       </div>
 
-      {otherError && (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {otherError}
-        </p>
-      )}
+      {otherError && <Alert>{otherError}</Alert>}
 
-      <section className="rounded-2xl border border-gray-200 shadow-sm dark:border-gray-800">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 p-4 dark:border-gray-800">
+      <section className="rounded-2xl border border-border-subtle bg-surface-raised shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle p-4">
           <h2 className="text-lg font-semibold">Wzorce wersji</h2>
-          <Link
-            to={{ search: toggleSearch ? `?${toggleSearch}` : "" }}
-            replace
-            className="text-sm text-blue-700 hover:underline dark:text-blue-400"
-          >
+          <Link to={{ search: toggleSearch ? `?${toggleSearch}` : "" }} replace className={`text-sm ${linkClass}`}>
             {showInactive ? "Ukryj nieaktywne" : `Pokaż nieaktywne (${inactiveCount})`}
           </Link>
         </div>
 
         {visiblePatterns.length === 0 ? (
-          <p className="p-4 text-sm text-gray-600 dark:text-gray-400">
+          <p className="p-4 text-sm text-text-muted">
             {showInactive ? "To repozytorium nie ma jeszcze wzorców." : "Brak aktywnych wzorców."}
           </p>
         ) : (
-          <ul className="divide-y divide-gray-200 dark:divide-gray-800">
+          <ul className="divide-y divide-border-subtle">
             {visiblePatterns.map((pattern) => (
-              <PatternRow key={pattern.id} pattern={pattern} busy={busy} />
+              <PatternRow key={pattern.id} pattern={pattern} busy={busy} onRequestDelete={requestDelete} />
             ))}
           </ul>
         )}
 
-        <Form
-          method="post"
-          ref={addPatternForm}
-          noValidate
-          className="space-y-2 border-t border-gray-200 p-4 dark:border-gray-800"
-        >
-          <label htmlFor="pattern" className="block text-sm font-medium">
-            Nowy wzorzec
-          </label>
-          <div className="flex flex-wrap gap-2">
-            <input
-              id="pattern"
-              name="pattern"
-              type="text"
-              placeholder="2.1.*"
-              className="w-40 rounded-lg border border-gray-300 bg-white px-3 py-2 font-mono dark:border-gray-700 dark:bg-gray-900"
-            />
-            <button
-              type="submit"
-              name="intent"
-              value="addPattern"
-              disabled={submitting}
-              className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-            >
-              {busy === "addPattern:" ? "Dodawanie…" : "Dodaj wzorzec"}
-            </button>
-          </div>
-          {addPatternError && (
-            <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-              {addPatternError}
-            </p>
-          )}
+        <Form method="post" ref={addPatternForm} noValidate className="border-t border-border-subtle p-4">
+          <Field label="Nowy wzorzec" error={addPatternError}>
+            {(control) => (
+              <div className="flex flex-wrap gap-2">
+                <Input name="pattern" type="text" placeholder="2.1.*" mono className="w-40" {...control} />
+                <Button type="submit" name="intent" value="addPattern" disabled={submitting}>
+                  {busy === "addPattern:" ? "Dodawanie…" : "Dodaj wzorzec"}
+                </Button>
+              </div>
+            )}
+          </Field>
         </Form>
       </section>
 
       <section>
         <h2 className="mb-4 text-lg font-semibold">Historia zmian</h2>
         {events.length === 0 ? (
-          <p className="text-sm text-gray-600 dark:text-gray-400">Brak zdarzeń.</p>
+          <p className="text-sm text-text-muted">Brak zdarzeń.</p>
         ) : (
-          <ul className="divide-y divide-gray-200 rounded-2xl border border-gray-200 dark:divide-gray-800 dark:border-gray-800">
+          <ul className="divide-y divide-border-subtle rounded-2xl border border-border-subtle bg-surface-raised">
             {events.map((event) => (
               <li key={event.id} className="flex flex-wrap gap-x-4 gap-y-1 p-3 text-sm">
-                <time dateTime={event.occurredAt} className="text-gray-600 dark:text-gray-400">
+                <time dateTime={event.occurredAt} className="text-text-muted">
                   {formatDateTime(event.occurredAt)}
                 </time>
                 <span className="font-medium">{event.actor}</span>
@@ -339,6 +354,15 @@ export default function RepoDetails({ loaderData, actionData }: Route.ComponentP
           </ul>
         )}
       </section>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={dialogTexts.title}
+        description={dialogTexts.description}
+        confirmLabel="Usuń"
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </main>
   );
 }

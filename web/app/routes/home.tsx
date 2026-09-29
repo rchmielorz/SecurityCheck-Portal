@@ -1,6 +1,11 @@
 import { Form, Link, redirect, useNavigation } from "react-router";
 
 import type { Route } from "./+types/home";
+import { Alert } from "../components/alert";
+import { Button } from "../components/button";
+import { Card } from "../components/card";
+import { Field, Input } from "../components/field";
+import { cx, focusRing } from "../components/styles";
 import { apiFetch } from "../lib/api";
 import { repositoryDisplayName, type RepositoryDetails, type RepositorySummary } from "../lib/patterns";
 
@@ -65,74 +70,51 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 
   return (
     <main className="container mx-auto p-4">
-      <h1 className="mb-6 text-2xl font-semibold">SecurityCheck Portal</h1>
-
-      <section className="mb-8 rounded-2xl border border-gray-200 p-6 shadow-sm dark:border-gray-800">
+      <h1 className="sr-only">Repozytoria</h1>
+      <Card className="mb-8">
         <h2 className="mb-4 text-lg font-semibold">Dodaj repozytorium</h2>
         <Form method="post" className="space-y-4" noValidate>
-          <div className="space-y-1">
-            <label htmlFor="url" className="block text-sm font-medium">
-              Adres repozytorium (HTTPS)
-            </label>
-            <input
-              id="url"
-              name="url"
-              type="url"
-              placeholder="https://gitlab-do.coig.app/grupa/projekt.git"
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
-            />
-          </div>
-          <div className="space-y-1">
-            <label htmlFor="name" className="block text-sm font-medium">
-              Nazwa (opcjonalnie)
-            </label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              maxLength={200}
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
-            />
-          </div>
-          {actionData?.error && (
-            <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-              {actionData.error}
-            </p>
-          )}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-          >
+          <Field label="Adres repozytorium (HTTPS)">
+            {(control) => (
+              <Input
+                name="url"
+                type="url"
+                placeholder="https://gitlab-do.coig.app/grupa/projekt.git"
+                {...control}
+              />
+            )}
+          </Field>
+          <Field label="Nazwa (opcjonalnie)">
+            {(control) => <Input name="name" type="text" maxLength={200} {...control} />}
+          </Field>
+          {actionData?.error && <Alert>{actionData.error}</Alert>}
+          <Button type="submit" disabled={submitting}>
             Dodaj
-          </button>
+          </Button>
         </Form>
-      </section>
+      </Card>
 
       <h2 className="mb-4 text-lg font-semibold">Repozytoria</h2>
       {repositories.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-gray-300 p-8 text-center text-gray-600 dark:border-gray-700 dark:text-gray-400">
+        <p className="rounded-2xl border border-dashed border-border p-8 text-center text-text-muted">
           Nie dodano jeszcze żadnego repozytorium.
         </p>
       ) : (
-        <ul className="divide-y divide-gray-200 rounded-2xl border border-gray-200 dark:divide-gray-800 dark:border-gray-800">
+        <ul className="divide-y divide-border-subtle rounded-2xl border border-border-subtle bg-surface-raised">
           {repositories.map((repository) => (
             <li key={repository.id}>
               <Link
                 to={`/repos/${repository.id}`}
-                className="flex flex-wrap items-center justify-between gap-2 p-4 hover:bg-gray-50 dark:hover:bg-gray-900"
+                className={cx(
+                  "flex flex-wrap items-center justify-between gap-2 p-4 hover:bg-surface-hover",
+                  focusRing,
+                )}
               >
                 <span className="min-w-0">
-                  <span className="block font-medium text-blue-700 dark:text-blue-400">
-                    {repositoryDisplayName(repository)}
-                  </span>
-                  <span className="block break-all text-sm text-gray-600 dark:text-gray-400">
-                    {repository.url}
-                  </span>
+                  <span className="block font-medium text-primary-text">{repositoryDisplayName(repository)}</span>
+                  <span className="block break-all text-sm text-text-muted">{repository.url}</span>
                 </span>
-                <span className="text-sm text-gray-700 dark:text-gray-300">
-                  {patternCountLabel(repository.activePatternCount)}
-                </span>
+                <span className="text-sm text-text-muted">{patternCountLabel(repository.activePatternCount)}</span>
               </Link>
             </li>
           ))}
