@@ -1,6 +1,7 @@
 /** Shapes of the /api/repos and /api/patterns responses (api/Repositories/RepositoryContracts.cs). */
 
 import type { BadgeKind } from "../components/badge";
+import type { LatestScan } from "./scan";
 
 export type RepositorySummary = {
   id: number;
@@ -26,6 +27,8 @@ export type VersionPattern = {
   createdAt: string;
   createdBy: string;
   lastResolution: Resolution | null;
+  /** Filled only by GET /api/repos/{id}; null when the pattern was never scanned. */
+  latestScan?: LatestScan | null;
 };
 
 export type RepositoryDetails = {
@@ -43,7 +46,8 @@ export type AuditAction =
   | "PatternAdded"
   | "PatternDeleted"
   | "PatternActivated"
-  | "PatternDeactivated";
+  | "PatternDeactivated"
+  | "ScanRequested";
 
 export type AuditEvent = {
   id: number;
@@ -155,6 +159,8 @@ export function describeEvent(event: AuditEvent): string {
       return `aktywacja wzorca ${pattern}`;
     case "PatternDeactivated":
       return `dezaktywacja wzorca ${pattern}`;
+    case "ScanRequested":
+      return `zlecenie skanu wzorca ${pattern}`;
     default:
       return event.action;
   }

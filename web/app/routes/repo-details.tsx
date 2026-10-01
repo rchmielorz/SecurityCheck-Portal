@@ -19,6 +19,7 @@ import {
   type RepositoryDetails,
   type VersionPattern,
 } from "../lib/patterns";
+import { describeLatestScan, scanStatusBadge, type ScanConflict, type ScanRequest } from "../lib/scan";
 
 const UNEXPECTED_ERROR = "Wystąpił nieoczekiwany błąd.";
 const INVALID_PATTERN = "Wzorzec musi mieć postać X.Y.*, np. 2.1.*.";
@@ -31,7 +32,9 @@ const SHOW_INACTIVE_PARAM = "nieaktywne";
 // Set by the add-repository redirect: focus the new-pattern field once, then drop the parameter.
 const FOCUS_NEW_PATTERN_PARAM = "nowy";
 
-type Intent = "addPattern" | "resolve" | "deactivate" | "activate" | "deletePattern" | "deleteRepo";
+const SCAN_INACTIVE = "Wzorzec jest nieaktywny — aktywuj go, aby uruchomić skan.";
+
+type Intent = "addPattern" | "resolve" | "scan" | "deactivate" | "activate" | "deletePattern" | "deleteRepo";
 
 type ActionResult = { intent: Intent; error?: string };
 
@@ -77,6 +80,14 @@ async function readConflict(response: Response): Promise<string | undefined> {
   }
 }
 
+async function readScanConflict(response: Response): Promise<ScanConflict | undefined> {
+  try {
+    return (await response.json()) as ScanConflict;
+  } catch {
+    return undefined;
+  }
+}
+
 async function errorMessage(intent: Intent, response: Response): Promise<string> {
   if (intent === "addPattern") {
     if (response.status === 400) return INVALID_PATTERN;
@@ -86,6 +97,7 @@ async function errorMessage(intent: Intent, response: Response): Promise<string>
   }
   if (intent === "deleteRepo" && response.status === 409) return REPO_HAS_PATTERNS;
   if (intent === "resolve" && response.status === 409) return RESOLVE_INACTIVE;
+  if (intent === "scan" && response.status === 409) return SCAN_INACTIVE;
   return UNEXPECTED_ERROR;
 }
 
@@ -113,6 +125,10 @@ export async function clientAction({ params, request }: Route.ClientActionArgs):
       path = `${repoPath}/patterns`;
       init = { method: "POST", body: JSON.stringify({ pattern: String(formData.get("pattern") ?? "").trim() }) };
       break;
+    case "scan":
+      path = `/api/patterns/${encodeURIComponent(String(formData.get("patternId") ?? ""))}/scans`;
+      init = { method: "POST" };
+      break;
     case "resolve":
     case "deactivate":
     case "activate":
@@ -134,6 +150,20 @@ export async function clientAction({ params, request }: Route.ClientActionArgs):
     // A thrown Response is the login redirect after a 401.
     if (error instanceof Response) throw error;
     return { intent, error: UNEXPECTED_ERROR };
+  }
+
+  const scanPage = (scanId: number) => redirect(`/repos/${encodeURIComponent(params.repoId)}/scans/${scanId}`);
+
+  if (intent === "scan") {
+    // 202: a new scan was queued. 409 "active": a scan of this pattern is already queued or running.
+    if (response.status === 202) {
+      const scan = (await response.json()) as ScanRequest;
+      return scanPage(scan.id);
+    }
+    if (response.status === 409) {
+      const conflict = await readScanConflict(response);
+      if (conflict?.reason === "active" && conflict.scanId != null) return scanPage(conflict.scanId);
+    }
   }
 
   if (response.ok) {
@@ -164,6 +194,8 @@ function PatternRow({
   const badge = resolutionBadge(pattern);
   const isBusy = (intent: Intent) => busy === `${intent}:${pattern.id}`;
   const disabled = busy !== null;
+  const latestScan = pattern.latestScan ?? null;
+  const scanBadge = latestScan ? scanStatusBadge(latestScan.status, latestScan.findingsCount) : null;
 
   return (
     <li className="flex flex-wrap items-start justify-between gap-4 p-4">
@@ -181,6 +213,15 @@ function PatternRow({
           {isBusy("resolve") && <span className="text-text-muted">Sprawdzanie…</span>}
         </div>
         {result.checkedAt && <p className="text-xs text-text-muted">{result.checkedAt}</p>}
+        {latestScan && scanBadge && (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <Badge kind={scanBadge.kind}>{scanBadge.label}</Badge>
+            <span className="text-text-muted">{describeLatestScan(latestScan)}</span>
+            <Link to={`/repos/${pattern.repositoryId}/scans/${latestScan.id}`} className={linkClass}>
+              Szczegóły skanu
+            </Link>
+          </div>
+        )}
       </div>
       <div className="flex flex-wrap gap-2">
         {pattern.isActive ? (
@@ -189,6 +230,12 @@ function PatternRow({
               <input type="hidden" name="patternId" value={pattern.id} />
               <Button type="submit" variant="secondary" name="intent" value="resolve" disabled={disabled}>
                 {isBusy("resolve") ? "Sprawdzanie…" : "Sprawdź"}
+              </Button>
+            </Form>
+            <Form method="post">
+              <input type="hidden" name="patternId" value={pattern.id} />
+              <Button type="submit" name="intent" value="scan" disabled={disabled}>
+                {isBusy("scan") ? "Zlecanie…" : "Skanuj"}
               </Button>
             </Form>
             <Form method="post">

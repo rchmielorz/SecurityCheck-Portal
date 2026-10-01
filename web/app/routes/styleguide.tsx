@@ -10,7 +10,9 @@ import { PageHeading, SectionHeading } from "../components/headings";
 import { RepositoryList } from "../components/repository-list";
 import { focusRing } from "../components/styles";
 import { ThemeToggle } from "../components/theme-toggle";
+import { VulnerabilityList } from "../components/vulnerability-list";
 import type { RepositorySummary } from "../lib/patterns";
+import type { ScanFinding } from "../lib/scan";
 
 // No `+types` import: typegen runs with NODE_ENV=production, so this dev-only
 // route gets no generated types there.
@@ -236,6 +238,74 @@ const LIST_CASES: Array<[string, RepositorySummary[]]> = [
   ["Długie nazwy i adresy", SAMPLE_LONG],
 ];
 
+const FINDING_ONE: ScanFinding[] = [
+  {
+    library: "Newtonsoft.Json",
+    installedVersion: "12.0.1",
+    vulnerabilityId: "CVE-2024-21907",
+    severity: "High",
+    fixedVersion: "13.0.1",
+    title: "Newtonsoft.Json: błąd przepełnienia stosu przy głęboko zagnieżdżonym JSON",
+    targets: ["src/App/packages.lock.json"],
+  },
+];
+
+const FINDING_MANY: ScanFinding[] = [
+  { ...FINDING_ONE[0], vulnerabilityId: "CVE-2024-0001", severity: "Critical" },
+  FINDING_ONE[0],
+  {
+    library: "lodash",
+    installedVersion: "4.17.15",
+    vulnerabilityId: "CVE-2021-23337",
+    severity: "Medium",
+    fixedVersion: "4.17.21",
+    title: null,
+    targets: ["web/package-lock.json", "admin/package-lock.json"],
+  },
+  {
+    library: "System.Text.Encodings.Web",
+    installedVersion: "4.7.0",
+    vulnerabilityId: "CVE-2021-26701",
+    severity: "Low",
+    fixedVersion: null,
+    title: null,
+    targets: ["src/Api/packages.lock.json"],
+  },
+  {
+    library: "example-lib",
+    installedVersion: "0.0.1",
+    vulnerabilityId: "GHSA-xxxx-yyyy-zzzz",
+    severity: "Unknown",
+    fixedVersion: null,
+    title: null,
+    targets: ["package-lock.json"],
+  },
+];
+
+const FINDING_LONG: ScanFinding[] = [
+  {
+    library: "Microsoft.AspNetCore.Authentication.JwtBearer.Extensions.WithAVeryLongPackageNameThatDoesNotFit",
+    installedVersion: "1.0.0-preview.1.build.20240101.long.prerelease.identifier",
+    vulnerabilityId: "CVE-2099-1234567890",
+    severity: "Critical",
+    fixedVersion: "1.0.1-preview.2.build.20240202.long.prerelease.identifier",
+    title:
+      "Bardzo długi opis podatności, który nie mieści się w jednym wierszu na wąskim ekranie i musi się zawinąć bez przewijania poziomego strony.",
+    targets: [
+      "src/zespol-platformy-wspolnej/podgrupa-z-bardzo-dluga-nazwa/projekt/packages.lock.json",
+      "src/inny-projekt/z-jeszcze-dluzsza-sciezka/do-pliku/package-lock.json",
+    ],
+  },
+];
+
+const FINDING_CASES: Array<[string, ScanFinding[], string | undefined]> = [
+  ["Brak wyników (skan zakończony, 0 podatności)", [], "Brak wyników — nie znaleziono podatności."],
+  ["Pusta lista bez komunikatu (np. skan niepełny; wywołujący nie potwierdza braku podatności)", [], undefined],
+  ["Jedna podatność", FINDING_ONE, undefined],
+  ["Kilka podatności (krytyczna, wysoka, średnia, niska, nieznana)", FINDING_MANY, undefined],
+  ["Długie wartości", FINDING_LONG, undefined],
+];
+
 export default function Styleguide() {
   const { values, dark } = useTokens();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -354,6 +424,18 @@ export default function Styleguide() {
               <div key={label} className="space-y-2">
                 <p className="text-sm text-text-muted">{label}</p>
                 <RepositoryList repositories={repositories} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div id="lista-podatnosci" className="space-y-3">
+          <h3 className="text-lg font-semibold">Lista podatności</h3>
+          <div className="max-w-3xl space-y-6">
+            {FINDING_CASES.map(([label, findings, emptyText]) => (
+              <div key={label} className="space-y-2">
+                <p className="text-sm text-text-muted">{label}</p>
+                <VulnerabilityList findings={findings} emptyText={emptyText} />
               </div>
             ))}
           </div>

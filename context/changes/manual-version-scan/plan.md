@@ -430,29 +430,29 @@ Migracja `AddScans` jest addytywna (`infrastructure.md:162`). Kolejność wdroż
 
 #### Automated
 
-- [x] 5.1 Testy endpointów przechodzą (202, 404, 409 nieaktywny, 409 aktywny z id, wyścig, sortowanie z `Unknown` na końcu, scalone duplikaty, audyt, `LatestScan` w szczegółach repozytorium jako skan o najwyższym `Id` przy dwóch skanach): `dotnet test api.Tests --filter "FullyQualifiedName~ScanEndpointsTests"`
-- [x] 5.2 Nowe ścieżki mają wiersze „401 bez ciasteczka" w `NoPublicEndpointsTests`: `dotnet test api.Tests --filter "FullyQualifiedName~NoPublicEndpointsTests"`
-- [x] 5.3 Całość testów API zielona: `dotnet test api.Tests`
-- [x] 5.4 Budowanie przechodzi: `dotnet build api`
+- [x] 5.1 Testy endpointów przechodzą (202, 404, 409 nieaktywny, 409 aktywny z id, wyścig, sortowanie z `Unknown` na końcu, scalone duplikaty, audyt, `LatestScan` w szczegółach repozytorium jako skan o najwyższym `Id` przy dwóch skanach): `dotnet test api.Tests --filter "FullyQualifiedName~ScanEndpointsTests"` — 355b5a0
+- [x] 5.2 Nowe ścieżki mają wiersze „401 bez ciasteczka" w `NoPublicEndpointsTests`: `dotnet test api.Tests --filter "FullyQualifiedName~NoPublicEndpointsTests"` — 355b5a0
+- [x] 5.3 Całość testów API zielona: `dotnet test api.Tests` — 355b5a0
+- [x] 5.4 Budowanie przechodzi: `dotnet build api` — 355b5a0
 
 #### Manual
 
-- [x] 5.5 Przez `api/securitycheck-portal.http`: logowanie, `POST` skanu, odpytywanie `GET` aż do `Completed` przy działającym workerze
+- [x] 5.5 Przez `api/securitycheck-portal.http`: logowanie, `POST` skanu, odpytywanie `GET` aż do `Completed` przy działającym workerze — 355b5a0
 
 ### Phase 6: UI i dokumentacja
 
 #### Automated
 
-- [ ] 6.1 Typy i trasy są spójne: `cd web && npm run typecheck`
-- [ ] 6.2 Brak zakodowanych wartości w zmienionych plikach (regex z `AGENTS.md`, oczekiwane 0 trafień)
-- [ ] 6.3 SPA buduje się i trafia do API: `cd web && npm run build:api`
-- [ ] 6.4 Backend nadal się buduje: `dotnet build api`
+- [x] 6.1 Typy i trasy są spójne: `cd web && npm run typecheck`
+- [x] 6.2 Brak zakodowanych wartości w zmienionych plikach (regex z `AGENTS.md`, oczekiwane 0 trafień)
+- [x] 6.3 SPA buduje się i trafia do API: `cd web && npm run build:api`
+- [x] 6.4 Backend nadal się buduje: `dotnet build api`
 
 #### Manual
 
-- [ ] 6.5 `/styleguide` pokazuje listę podatności we wszystkich stanach w trybie jasnym i ciemnym, kontrast AA zachowany
-- [ ] 6.6 Pełny przepływ lokalnie (API + worker + UI): „Skanuj" przenosi na stronę skanu, stan odświeża się bez przeładowania, widać listę posortowaną od critical, a repozytorium bez lock file kończy się ostrzeżeniem „niepełny"
-- [ ] 6.7 Skan czystego repozytorium z lock file pokazuje „brak wyników", a awaria (np. zły adres bazy Trivy) pokazuje błąd z przyczyną
-- [ ] 6.8 Nawigacja klawiaturą i widoczny fokus na nowych elementach; wylogowanie w trakcie przekierowuje na `/login`
-- [ ] 6.9 `AGENTS.md` opisuje worker, opcje `Scan:*` i polecenie uruchomienia
-- [ ] 6.10 Skan w stanie `Queued` dłużej niż 2 minuty (przy zatrzymanym workerze) pokazuje ostrzeżenie, że worker może nie działać, a „Historia zmian" pokazuje polską etykietę dla zdarzenia skanu
+- [x] 6.5 `/styleguide` pokazuje listę podatności we wszystkich stanach w trybie jasnym i ciemnym, kontrast AA zachowany
+- [x] 6.6 Pełny przepływ lokalnie (API + worker + UI): „Skanuj" przenosi na stronę skanu, stan odświeża się bez przeładowania, widać listę posortowaną od critical, a repozytorium bez lock file kończy się ostrzeżeniem „niepełny"
+- [x] 6.7 Skan czystego repozytorium z lock file pokazuje „brak wyników", a awaria (np. zły adres bazy Trivy) pokazuje błąd z przyczyną
+- [x] 6.8 Nawigacja klawiaturą i widoczny fokus na nowych elementach; wylogowanie w trakcie przekierowuje na `/login`
+- [x] 6.9 `AGENTS.md` opisuje worker, opcje `Scan:*` i polecenie uruchomienia
+- [x] 6.10 Skan w stanie `Queued` dłużej niż 2 minuty (przy zatrzymanym workerze) pokazuje ostrzeżenie, że worker może nie działać, a „Historia zmian" pokazuje polską etykietę dla zdarzenia skanu
