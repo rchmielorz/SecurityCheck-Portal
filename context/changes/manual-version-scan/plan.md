@@ -378,14 +378,14 @@ Migracja `AddScans` jest addytywna (`infrastructure.md:162`). Kolejność wdroż
 
 #### Automated
 
-- [ ] 1.1 Budowanie przechodzi: `dotnet build api`
-- [ ] 1.2 Istniejące testy Git przechodzą bez zmian: `dotnet test api.Tests --filter "FullyQualifiedName~Git"`
-- [ ] 1.3 Testy runnera przechodzą (kod wyjścia, kod niezerowy, nieistniejący plik, timeout zabija drzewo procesów, ucięcie wyjścia): `dotnet test api.Tests --filter "FullyQualifiedName~ProcessRunner"`
-- [ ] 1.4 Testy checkoutu z atrapą runnera przechodzą (argumenty, token tylko w env, brak krótkiego limitu transferu w klonie, `CommitMismatch`, błąd klonu): `dotnet test api.Tests --filter "FullyQualifiedName~GitCheckout"`
+- [x] 1.1 Budowanie przechodzi: `dotnet build api`
+- [x] 1.2 Istniejące testy Git przechodzą bez zmian: `dotnet test api.Tests --filter "FullyQualifiedName~Git"`
+- [x] 1.3 Testy runnera przechodzą (kod wyjścia, kod niezerowy, nieistniejący plik, timeout zabija drzewo procesów, ucięcie wyjścia): `dotnet test api.Tests --filter "FullyQualifiedName~ProcessRunner"`
+- [x] 1.4 Testy checkoutu z atrapą runnera przechodzą (argumenty, token tylko w env, brak krótkiego limitu transferu w klonie, `CommitMismatch`, błąd klonu): `dotnet test api.Tests --filter "FullyQualifiedName~GitCheckout"`
 
 #### Manual
 
-- [ ] 1.5 Test integracyjny pomijalny (zmienna `SCAN_IT_REPO_URL` + tag) klonuje prawdziwe repozytorium z wewnętrznego GitLaba i `HEAD` równa się commitowi z rozwiązania
+- [x] 1.5 Test integracyjny pomijalny (zmienna `SCAN_IT_REPO_URL` + tag) klonuje prawdziwe repozytorium z wewnętrznego GitLaba i `HEAD` równa się commitowi z rozwiązania
 
 ### Phase 2: Model danych i migracja
 

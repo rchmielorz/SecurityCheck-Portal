@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using securitycheck_portal.Core.Processes;
 
 namespace securitycheck_portal.Core.Git;
 
@@ -19,7 +20,9 @@ public static class GitServiceCollectionExtensions
                 "Git:UserName must not contain ':' (it is sent as Basic auth).")
             .ValidateOnStart();
 
+        services.AddSingleton<IProcessRunner, ProcessRunner>();
         services.AddSingleton<IGitTagSource, GitCliTagSource>();
+        services.AddSingleton<IGitCheckout, GitCliCheckout>();
         services.AddSingleton<PatternResolutionService>();
 
         return services;
