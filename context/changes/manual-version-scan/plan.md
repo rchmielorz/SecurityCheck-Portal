@@ -403,28 +403,28 @@ Migracja `AddScans` jest addytywna (`infrastructure.md:162`). Kolejność wdroż
 
 #### Automated
 
-- [x] 3.1 Testy kontraktowe parsera na przykładowych JSON przechodzą (z podatnościami, czysty, brak targetów, `UNKNOWN`, duplikat w dwóch plikach, niepoprawny JSON): `dotnet test api.Tests --filter "FullyQualifiedName~TrivyReportParser"`
-- [x] 3.2 Testy detektora plików blokady przechodzą: `dotnet test api.Tests --filter "FullyQualifiedName~LockFileDetector"`
-- [x] 3.3 Testy skanera z atrapą runnera przechodzą (baza zbyt stara, aktualizacja nieudana z cache w limicie, timeout, zakazana wersja, środowisko bez PAT-a): `dotnet test api.Tests --filter "FullyQualifiedName~TrivyScanner"`
-- [x] 3.4 Opcje `Scan` walidują się na starcie (brak `CacheDirectory` zatrzymuje aplikację): `dotnet test api.Tests --filter "FullyQualifiedName~ScanOptions"`
+- [x] 3.1 Testy kontraktowe parsera na przykładowych JSON przechodzą (z podatnościami, czysty, brak targetów, `UNKNOWN`, duplikat w dwóch plikach, niepoprawny JSON): `dotnet test api.Tests --filter "FullyQualifiedName~TrivyReportParser"` — fcdbc0f
+- [x] 3.2 Testy detektora plików blokady przechodzą: `dotnet test api.Tests --filter "FullyQualifiedName~LockFileDetector"` — fcdbc0f
+- [x] 3.3 Testy skanera z atrapą runnera przechodzą (baza zbyt stara, aktualizacja nieudana z cache w limicie, timeout, zakazana wersja, środowisko bez PAT-a): `dotnet test api.Tests --filter "FullyQualifiedName~TrivyScanner"` — fcdbc0f
+- [x] 3.4 Opcje `Scan` walidują się na starcie (brak `CacheDirectory` zatrzymuje aplikację): `dotnet test api.Tests --filter "FullyQualifiedName~ScanOptions"` — fcdbc0f
 
 #### Manual
 
-- [x] 3.5 Test integracyjny pomijalny (`TRIVY_PATH`) uruchomiony z prawdziwym Trivy na repozytorium z `packages.lock.json` zwraca oczekiwane podatności, a bez pliku blokady zwraca `Incomplete`
+- [x] 3.5 Test integracyjny pomijalny (`TRIVY_PATH`) uruchomiony z prawdziwym Trivy na repozytorium z `packages.lock.json` zwraca oczekiwane podatności, a bez pliku blokady zwraca `Incomplete` — fcdbc0f
 
 ### Phase 4: Worker i pipeline skanu
 
 #### Automated
 
-- [ ] 4.1 Budowanie przechodzi: `dotnet build worker` oraz `dotnet build api`
-- [ ] 4.2 Testy pipeline'u z prawdziwą bazą i atrapami przechodzą (completed, incomplete, każdy `FailureReason`, wzorzec usunięty lub nieaktywny, sprzątanie katalogu, brak PAT w `FailureDetail`, wiersz wzorca niezmieniony po ponownym rozwiązaniu): `dotnet test api.Tests --filter "FullyQualifiedName~ScanJobRunner"`
-- [ ] 4.3 Claim jest atomowy (dwa równoległe claimy, jeden wygrywa) i odzyskiwanie po restarcie działa: `dotnet test api.Tests --filter "FullyQualifiedName~ScanQueue"`
-- [ ] 4.4 Istniejący test `resolve` nadal przechodzi: `dotnet test api.Tests --filter "FullyQualifiedName~RepositoryEndpointsTests"`
+- [x] 4.1 Budowanie przechodzi: `dotnet build worker` oraz `dotnet build api`
+- [x] 4.2 Testy pipeline'u z prawdziwą bazą i atrapami przechodzą (completed, incomplete, każdy `FailureReason`, wzorzec usunięty lub nieaktywny, sprzątanie katalogu, brak PAT w `FailureDetail`, wiersz wzorca niezmieniony po ponownym rozwiązaniu): `dotnet test api.Tests --filter "FullyQualifiedName~ScanJobRunner"`
+- [x] 4.3 Claim jest atomowy (dwa równoległe claimy, jeden wygrywa) i odzyskiwanie po restarcie działa: `dotnet test api.Tests --filter "FullyQualifiedName~ScanQueue"`
+- [x] 4.4 Istniejący test `resolve` nadal przechodzi: `dotnet test api.Tests --filter "FullyQualifiedName~RepositoryEndpointsTests"`
 
 #### Manual
 
-- [ ] 4.5 `dotnet run --project worker` podejmuje wiersz `Queued` wstawiony ręcznie do bazy i kończy go statusem `Completed` lub `Incomplete` z prawdziwym Trivy
-- [ ] 4.6 Zatrzymanie workera w trakcie skanu i ponowne uruchomienie ustawia skan na `Failed` z przyczyną „przerwany", a katalog w `WorkRoot` znika
+- [x] 4.5 `dotnet run --project worker` podejmuje wiersz `Queued` wstawiony ręcznie do bazy i kończy go statusem `Completed` lub `Incomplete` z prawdziwym Trivy
+- [x] 4.6 Zatrzymanie workera w trakcie skanu i ponowne uruchomienie ustawia skan na `Failed` z przyczyną „przerwany", a katalog w `WorkRoot` znika
 
 ### Phase 5: API skanów
 
