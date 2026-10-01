@@ -391,26 +391,26 @@ Migracja `AddScans` jest addytywna (`infrastructure.md:162`). Kolejność wdroż
 
 #### Automated
 
-- [x] 2.1 Migracja nie zostawia niezatwierdzonych zmian modelu: `dotnet ef migrations has-pending-model-changes --project core --startup-project api`
-- [x] 2.2 Testy schematu przechodzą (drugi aktywny skan tego samego wzorca odrzucony, po zakończeniu pierwszego dozwolony, unikalność wyników, kaskada usuwania wyników, skan przeżywa usunięcie wzorca): `dotnet test api.Tests --filter "FullyQualifiedName~SchemaTests"`
-- [x] 2.3 Budowanie przechodzi: `dotnet build api`
+- [x] 2.1 Migracja nie zostawia niezatwierdzonych zmian modelu: `dotnet ef migrations has-pending-model-changes --project core --startup-project api` — 3816edf
+- [x] 2.2 Testy schematu przechodzą (drugi aktywny skan tego samego wzorca odrzucony, po zakończeniu pierwszego dozwolony, unikalność wyników, kaskada usuwania wyników, skan przeżywa usunięcie wzorca): `dotnet test api.Tests --filter "FullyQualifiedName~SchemaTests"` — 3816edf
+- [x] 2.3 Budowanie przechodzi: `dotnet build api` — 3816edf
 
 #### Manual
 
-- [x] 2.4 `dotnet ef database update --project core --startup-project api` na lokalnej bazie tworzy tabele `Scans` i `ScanFindings`
+- [x] 2.4 `dotnet ef database update --project core --startup-project api` na lokalnej bazie tworzy tabele `Scans` i `ScanFindings` — 3816edf
 
 ### Phase 3: Trivy — uruchomienie, baza, parser
 
 #### Automated
 
-- [ ] 3.1 Testy kontraktowe parsera na przykładowych JSON przechodzą (z podatnościami, czysty, brak targetów, `UNKNOWN`, duplikat w dwóch plikach, niepoprawny JSON): `dotnet test api.Tests --filter "FullyQualifiedName~TrivyReportParser"`
-- [ ] 3.2 Testy detektora plików blokady przechodzą: `dotnet test api.Tests --filter "FullyQualifiedName~LockFileDetector"`
-- [ ] 3.3 Testy skanera z atrapą runnera przechodzą (baza zbyt stara, aktualizacja nieudana z cache w limicie, timeout, zakazana wersja, środowisko bez PAT-a): `dotnet test api.Tests --filter "FullyQualifiedName~TrivyScanner"`
-- [ ] 3.4 Opcje `Scan` walidują się na starcie (brak `CacheDirectory` zatrzymuje aplikację): `dotnet test api.Tests --filter "FullyQualifiedName~ScanOptions"`
+- [x] 3.1 Testy kontraktowe parsera na przykładowych JSON przechodzą (z podatnościami, czysty, brak targetów, `UNKNOWN`, duplikat w dwóch plikach, niepoprawny JSON): `dotnet test api.Tests --filter "FullyQualifiedName~TrivyReportParser"`
+- [x] 3.2 Testy detektora plików blokady przechodzą: `dotnet test api.Tests --filter "FullyQualifiedName~LockFileDetector"`
+- [x] 3.3 Testy skanera z atrapą runnera przechodzą (baza zbyt stara, aktualizacja nieudana z cache w limicie, timeout, zakazana wersja, środowisko bez PAT-a): `dotnet test api.Tests --filter "FullyQualifiedName~TrivyScanner"`
+- [x] 3.4 Opcje `Scan` walidują się na starcie (brak `CacheDirectory` zatrzymuje aplikację): `dotnet test api.Tests --filter "FullyQualifiedName~ScanOptions"`
 
 #### Manual
 
-- [ ] 3.5 Test integracyjny pomijalny (`TRIVY_PATH`) uruchomiony z prawdziwym Trivy na repozytorium z `packages.lock.json` zwraca oczekiwane podatności, a bez pliku blokady zwraca `Incomplete`
+- [x] 3.5 Test integracyjny pomijalny (`TRIVY_PATH`) uruchomiony z prawdziwym Trivy na repozytorium z `packages.lock.json` zwraca oczekiwane podatności, a bez pliku blokady zwraca `Incomplete`
 
 ### Phase 4: Worker i pipeline skanu
 

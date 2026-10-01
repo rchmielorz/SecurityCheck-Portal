@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using securitycheck_portal.Core.Processes;
+using securitycheck_portal.Core.Scanning;
 
 namespace securitycheck_portal.Core.Git;
 
@@ -10,24 +11,24 @@ namespace securitycheck_portal.Core.Git;
 /// Same hardening and token handling as <see cref="GitCliTagSource"/>, but with the clone's own, longer limits.
 /// </summary>
 public sealed class GitCliCheckout(
-    IOptions<GitOptions> options, IProcessRunner runner, ILogger<GitCliCheckout> logger) : IGitCheckout
+    IOptions<GitOptions> options,
+    IOptions<ScanOptions> scanOptions,
+    IProcessRunner runner,
+    ILogger<GitCliCheckout> logger) : IGitCheckout
 {
-    public static readonly TimeSpan DefaultCloneTimeout = TimeSpan.FromMinutes(10);
-
     private const int MaxCapturedChars = 64 * 1024;
-
-    /// <summary>Overall limit of the clone. Not <c>Git:TimeoutSeconds</c>, which is the short <c>ls-remote</c> limit.</summary>
-    public TimeSpan CloneTimeout { get; init; } = DefaultCloneTimeout;
 
     public async Task<GitCheckoutResult> CheckoutAsync(
         string canonicalUrl, string tag, string expectedCommit, string targetDirectory, CancellationToken cancellationToken)
     {
         var settings = options.Value;
         var isWindows = OperatingSystem.IsWindows();
+        // Scan:CloneTimeoutMinutes, not Git:TimeoutSeconds, which is the short ls-remote limit.
+        var cloneTimeout = TimeSpan.FromMinutes(scanOptions.Value.CloneTimeoutMinutes);
 
         var clone = await runner.RunAsync(
             CreateCloneStartInfo(settings, canonicalUrl, tag, targetDirectory, isWindows),
-            CloneTimeout, MaxCapturedChars, cancellationToken);
+            cloneTimeout, MaxCapturedChars, cancellationToken);
 
         var failure = ToFailure(clone, "clone", canonicalUrl);
         if (failure is not null)

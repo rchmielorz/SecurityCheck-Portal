@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using securitycheck_portal.Core.Git;
 using securitycheck_portal.Core.Processes;
+using securitycheck_portal.Core.Scanning;
 
 namespace securitycheck_portal.Tests.Git;
 
@@ -26,7 +27,10 @@ public sealed class GitCheckoutTests
 
     private readonly FakeProcessRunner _runner = new();
 
-    private GitCliCheckout Checkout => new(Options.Create(Settings), _runner, NullLogger<GitCliCheckout>.Instance);
+    private static readonly ScanOptions Scan = new() { CloneTimeoutMinutes = 10 };
+
+    private GitCliCheckout Checkout
+        => new(Options.Create(Settings), Options.Create(Scan), _runner, NullLogger<GitCliCheckout>.Instance);
 
     [Fact]
     public async Task Clones_the_tag_shallowly_with_the_url_after_end_of_options_and_verifies_head()
@@ -94,9 +98,9 @@ public sealed class GitCheckoutTests
 
         await Checkout.CheckoutAsync(Url, Tag, Commit, Target, CancellationToken.None);
 
-        Assert.Equal(GitCliCheckout.DefaultCloneTimeout, _runner.Calls[0].Timeout);
+        Assert.Equal(TimeSpan.FromMinutes(Scan.CloneTimeoutMinutes), _runner.Calls[0].Timeout);
         Assert.Equal(TimeSpan.FromSeconds(Settings.TimeoutSeconds), _runner.Calls[1].Timeout);
-        Assert.True(GitCliCheckout.DefaultCloneTimeout > _runner.Calls[1].Timeout);
+        Assert.True(_runner.Calls[0].Timeout > _runner.Calls[1].Timeout);
     }
 
     [Fact]
@@ -166,7 +170,7 @@ public sealed class GitCheckoutTests
 
         var target = Path.Combine(Path.GetTempPath(), "scan-it-" + Guid.NewGuid().ToString("N"));
         var runner = new ProcessRunner(NullLogger<ProcessRunner>.Instance);
-        var checkout = new GitCliCheckout(Options.Create(settings), runner, NullLogger<GitCliCheckout>.Instance);
+        var checkout = new GitCliCheckout(Options.Create(settings), Options.Create(new ScanOptions()), runner, NullLogger<GitCliCheckout>.Instance);
         try
         {
             var result = await checkout.CheckoutAsync(url!, tag!, commit!, target, CancellationToken.None);
