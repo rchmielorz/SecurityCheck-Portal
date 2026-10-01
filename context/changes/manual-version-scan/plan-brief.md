@@ -29,6 +29,8 @@ Na stronie repozytorium każdy aktywny wzorzec ma „Skanuj" i skrót ostatniego
 | Współbieżność | Jeden aktywny skan na wzorzec (częściowy unikalny indeks), przerwany restartem = failed | Brak zdublowanych wyników i niewidocznych ponowień | Plan |
 | Izolacja Trivy | Środowisko z białej listy, bez PAT-a, zakaz wersji 0.69.4 | Ochrona poświadczenia przed skompromitowanym Trivy | Research |
 | Skan i dane | Snapshot bez FK do wzorca, wyniki w EF | Skan przeżywa usunięcie wzorca (S-03) | Plan |
+| Zapis wzorca | Worker nie zapisuje `LastResolved*`, skan trzyma własny tag i commit | `VersionPattern` nie ma tokenu współbieżności, więc unikamy wyścigu z endpointem `resolve` | Plan review |
+| Limity klonu | Osobny `Scan:CloneTimeoutMinutes` i łagodniejszy `lowSpeedTime` dla `clone` | Domyślne 30 s i 20 s bezruchu z `ls-remote` przerwałyby realny klon | Plan review |
 
 ## Scope
 
@@ -67,7 +69,8 @@ API zapisuje skan w stanie `Queued` i kończy. Worker (cienki `BackgroundService
 - Wykrywanie lock files jest zachowawcze i może zgłaszać `incomplete` częściej niż trzeba (np. projekty testowe bez lock file).
 - Po anulowaniu procesy potomne mogą przeżyć na Windows (jak w S-01); Job Object poza zakresem.
 - Dostępność bazy Trivy (proxy, mirror) i działanie Trivy na serwerze docelowym wymagają weryfikacji w F-02.
-- Ponowne rozwiązanie wzorca może wskazać inny tag niż ten widoczny w UI przed kliknięciem; skan zawsze pokazuje, co faktycznie przeskanowano.
+- Ponowne rozwiązanie wzorca może wskazać inny tag niż ten widoczny w UI przed kliknięciem; skan zawsze pokazuje, co faktycznie przeskanowano (wiersz wzorca nie jest aktualizowany przez worker).
+- Trivy może wymagać osobnej bazy Java przy plikach `.jar` (niezweryfikowane, do potwierdzenia przy implementacji).
 
 ## Success Criteria (Summary)
 

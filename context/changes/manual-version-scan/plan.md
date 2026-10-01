@@ -6,7 +6,7 @@ Użytkownik klika „Skanuj" przy wzorcu wersji (np. `2.1.*`) i po kilku minutac
 
 ## Current State Analysis
 
-- **Rozwiązywanie wzorca istnieje.** `PatternResolutionService` jest bezstanowy i można go uruchomić ponownie w chwili skanu ([research.md](research.md), follow-up 1; `core/Git/PatternResolutionService.cs`). Zapis wyniku (`ResolveAsync`) jest prywatny w klasie endpointów (`api/Repositories/RepositoryEndpoints.cs:396-414`), więc worker musi dostać wydzieloną wersję.
+- **Rozwiązywanie wzorca istnieje.** `PatternResolutionService` jest bezstanowy i można go uruchomić ponownie w chwili skanu ([research.md](research.md), follow-up 1; `core/Git/PatternResolutionService.cs`). Zapis wyniku do wzorca (`ResolveAsync`, `api/Repositories/RepositoryEndpoints.cs:396-414`) zostaje w API bez zmian: worker nie zapisuje `LastResolved*`, bo `VersionPattern` nie ma tokenu współbieżności, a skan trzyma własny tag i commit.
 - **Jest jeden utwardzony launcher procesów**: `core/Git/GitCliTagSource.cs` (Process, czyszczenie zmiennych `GIT_*`, PAT w env zawężony do URL, zamknięty stdin, `Kill(entireProcessTree: true)`, timeout łączony z tokenem wywołującego). Testy sprawdzają `ProcessStartInfo` ze statycznego `CreateStartInfo` (`api.Tests/Git/GitCliTagSourceTests.cs:25-78`).
 - **Brak** hosta w tle, projektu workera, pliku `.sln`, CI, kodu klonowania i jakiegokolwiek modelu skanu. Jedna migracja EF (`core/Data/Migrations/20260927222900_InitialRepositories.cs`).
 - **API**: minimalne endpointy z fallbackiem autoryzacji, tożsamość z claimu `sub` (`GetActor`, `RepositoryEndpoints.cs:356-360`), błędy jako gołe kody statusu, wzorzec zapisu `TrySaveAsync` / `InsertWithEventAsync` (`:421-460`).
@@ -72,7 +72,7 @@ Wyciągnąć z `GitCliTagSource` utwardzone uruchamianie procesu do wspólnego k
 
 **Intent**: Przenieść zawartość `CreateStartInfo` (konfiguracja `-c`, czyszczenie `GIT_*`, `GIT_CONFIG_*`, nagłówek PAT zawężony do URL) do fabryki parametryzowanej argumentami podkomendy. `GitCliTagSource` używa fabryki i runnera; publiczne `CreateStartInfo` zostaje jako cienki wrapper, żeby istniejące testy działały bez zmian.
 
-**Contract**: fabryka przyjmuje `GitOptions`, kanoniczny URL i argumenty (`ls-remote`, `clone`, `rev-parse`) i zwraca `ProcessStartInfo`. Dla klonowania dodatkowo `core.longpaths=true`; `--end-of-options` przed URL.
+**Contract**: fabryka przyjmuje `GitOptions`, kanoniczny URL i argumenty (`ls-remote`, `clone`, `rev-parse`) i zwraca `ProcessStartInfo`. Dla klonowania dodatkowo `core.longpaths=true`; `--end-of-options` przed URL. Krótkie limity `ls-remote` (`Git:TimeoutSeconds` = 30 s, `http.lowSpeedLimit=1000` i `http.lowSpeedTime=20`) nie dotyczą klonu: klon dostaje osobny limit `Scan:CloneTimeoutMinutes` i łagodniejszy `lowSpeedTime` (rzędu minut), bo pakowanie po stronie serwera nie wysyła danych.
 
 #### 3. Checkout na commit
 
@@ -89,7 +89,7 @@ Wyciągnąć z `GitCliTagSource` utwardzone uruchamianie procesu do wspólnego k
 - Budowanie przechodzi: `dotnet build api`
 - Istniejące testy Git przechodzą bez zmian: `dotnet test api.Tests --filter "FullyQualifiedName~Git"`
 - Testy runnera przechodzą (kod wyjścia, kod niezerowy, nieistniejący plik, timeout zabija drzewo procesów, ucięcie wyjścia): `dotnet test api.Tests --filter "FullyQualifiedName~ProcessRunner"`
-- Testy checkoutu z atrapą runnera przechodzą (argumenty, token tylko w env, `CommitMismatch`, błąd klonu): `dotnet test api.Tests --filter "FullyQualifiedName~GitCheckout"`
+- Testy checkoutu z atrapą runnera przechodzą (argumenty, token tylko w env, brak krótkiego limitu transferu w klonie, `CommitMismatch`, błąd klonu): `dotnet test api.Tests --filter "FullyQualifiedName~GitCheckout"`
 
 #### Manual Verification:
 
@@ -159,7 +159,7 @@ Komponent, który dla katalogu z checkoutem zwraca jawny wynik skanu: lista poda
 
 **Intent**: Sekcja `Scan` z walidacją na starcie, tak jak `GitOptions`.
 
-**Contract**: `TrivyExecutablePath` (domyślnie `trivy`), `CacheDirectory` i `WorkRoot` (wymagane), `ScanTimeoutMinutes` (1-120, domyślnie 15), `DbUpdateTimeoutMinutes` (domyślnie 5), `MaxDbAgeDays` (1-90, domyślnie 7), `DbRepository` (opcjonalne, mirror), `ExpectedTrivyVersion` (opcjonalne), `PollIntervalSeconds` (domyślnie 5).
+**Contract**: `TrivyExecutablePath` (domyślnie `trivy`), `CacheDirectory` i `WorkRoot` (wymagane), `ScanTimeoutMinutes` (1-120, domyślnie 15), `CloneTimeoutMinutes` (domyślnie 10), `DbUpdateTimeoutMinutes` (domyślnie 5), `MaxDbAgeDays` (1-90, domyślnie 7), `DbRepository` (opcjonalne, mirror), `ExpectedTrivyVersion` (opcjonalne), `PollIntervalSeconds` (domyślnie 5).
 
 #### 2. Wykrywanie plików blokady
 
@@ -175,7 +175,7 @@ Komponent, który dla katalogu z checkoutem zwraca jawny wynik skanu: lista poda
 
 **Intent**: (a) odczytać wersję i wiek bazy (`trivy version --format json`), (b) próbować zaktualizować bazę, a przy porażce użyć cache tylko poniżej `MaxDbAgeDays`, (c) uruchomić `trivy fs --scanners vuln --format json --output <plik>` z `--cache-dir` i `--skip-db-update`, (d) sparsować raport. Env z białej listy, bez PAT-a. Odrzucić wersję `0.69.4` i wersję inną niż `ExpectedTrivyVersion`, jeśli ustawiona.
 
-**Contract**: wynik `ScanOutcome`: `Completed(findings, trivyVersion, dbUpdatedAt)` / `Incomplete(findings, missingLockFiles, …)` / `Failed(reason, detail)`. Parser czyta `Results[].Target` i `Results[].Vulnerabilities[]` (`VulnerabilityID`, `PkgName`, `InstalledVersion`, `FixedVersion`, `Severity`, `Title`); scala wiersze o tej samej parze (biblioteka, wersja, CVE) w jeden z listą plików. Brak targetów lub niezerowy kod lub niepoprawny JSON: `Incomplete` (brak targetów) albo `Failed(ScannerFailed)`. Flagi Trivy potwierdzić względem przypiętej wersji przy implementacji (nie weryfikowane w badaniach).
+**Contract**: wynik `ScanOutcome`: `Completed(findings, trivyVersion, dbUpdatedAt)` / `Incomplete(findings, missingLockFiles, …)` / `Failed(reason, detail)`. Parser czyta `Results[].Target` i `Results[].Vulnerabilities[]` (`VulnerabilityID`, `PkgName`, `InstalledVersion`, `FixedVersion`, `Severity`, `Title`); scala wiersze o tej samej parze (biblioteka, wersja, CVE) w jeden z listą plików. Brak targetów lub niezerowy kod lub niepoprawny JSON: `Incomplete` (brak targetów) albo `Failed(ScannerFailed)`. Flagi Trivy potwierdzić względem przypiętej wersji przy implementacji (nie weryfikowane w badaniach). Przy plikach `.jar` w checkoucie Trivy może wymagać osobnej bazy Java z innego rejestru (niezweryfikowane); sprawdzić `--skip-java-db-update` i `--java-db-repository` i zapisać decyzję w kodzie i w `AGENTS.md`, żeby blokada proxy nie kończyła skanu błędem.
 
 ### Success Criteria:
 
@@ -200,36 +200,28 @@ Pipeline skanu w `core/` i cienki host `worker/` z pętlą claimowania, odzyskiw
 
 ### Changes Required:
 
-#### 1. Zapis rozwiązania wzorca we wspólnym miejscu
-
-**File**: `core/Git/PatternResolutionRecorder.cs` (nowe), `api/Repositories/RepositoryEndpoints.cs`
-
-**Intent**: Przenieść zapis `LastResolved*` z prywatnego `ResolveAsync` endpointów do wspólnej usługi, której używa też worker; endpoint `resolve` zachowuje dotychczasowe odpowiedzi.
-
-**Contract**: `ResolveAndRecordAsync(VersionPattern pattern, ct)` zwraca `PatternResolution` i aktualizuje pola wzorca jak dziś (`LastResolvedAt` z `TimeProvider`).
-
-#### 2. Pipeline
+#### 1. Pipeline
 
 **File**: `core/Scanning/ScanJobRunner.cs` (nowe)
 
-**Intent**: Dla zaclaimowanego skanu: rozwiązać wzorzec ponownie (zapis tagu i commita w skanie), zrobić checkout do `WorkRoot/<scanId>`, sprawdzić lock files, uruchomić Trivy, zapisać wyniki i status, zawsze usunąć katalog. Każda porażka mapuje się na jawny `FailureReason`, a `FailureDetail` to jedna przycięta linia bez sekretów (wartość PAT usuwana z tekstu).
+**Intent**: Dla zaclaimowanego skanu: załadować wzorzec, rozwiązać go ponownie przez `PatternResolutionService` (tag i commit zapisane w skanie, **bez zapisu do wzorca**: `LastResolved*` należy do endpointu `resolve`, a `VersionPattern` nie ma tokenu współbieżności), zrobić checkout do `WorkRoot/<scanId>`, sprawdzić lock files, uruchomić Trivy, zapisać wyniki i status, zawsze usunąć katalog. Każda porażka mapuje się na jawny `FailureReason`, a `FailureDetail` to jedna przycięta linia bez sekretów (wartość PAT usuwana z tekstu).
 
-**Contract**: `RunAsync(scanId, ct)`; claim atomowy (`UPDATE … WHERE Status='Queued' … FOR UPDATE SKIP LOCKED`, jeden skan naraz); `RecoverInterruptedAsync()` ustawia `Running` na `Failed(Interrupted)` i czyści osierocone katalogi w `WorkRoot`. Stan wzorca `NoMatch`/`Ambiguous`/`Error` kończy skan jako `Failed(PatternNotResolved)`.
+**Contract**: `RunAsync(scanId, ct)`; claim atomowy (`UPDATE … WHERE Status='Queued' … FOR UPDATE SKIP LOCKED`, jeden skan naraz); `RecoverInterruptedAsync()` ustawia `Running` na `Failed(Interrupted)` i czyści osierocone katalogi w `WorkRoot`. Wzorzec usunięty lub nieaktywny w chwili podjęcia skanu (`Scans` nie ma FK do wzorców, więc usunięcie jest możliwe między `POST` a workerem) oraz stan `NoMatch`/`Ambiguous`/`Error` kończą skan jako `Failed(PatternNotResolved)` z detalem opisującym przypadek.
 
-#### 3. Projekt workera
+#### 2. Projekt workera
 
 **File**: `worker/securitycheck-portal.Worker.csproj`, `worker/Program.cs`, `worker/ScanWorker.cs` (nowe)
 
 **Intent**: Host `BackgroundService`, który co `PollIntervalSeconds` claimuje i wykonuje skan; `AddWindowsService()`; rejestracja `AddPortalData`, `AddGitResolution`, `AddScanning`. Nazwa projektu zgodna z konwencją repo, nazwa usługi Windows `SecurityCheck.Worker` zgodna z `infrastructure.md`.
 
-**Contract**: osobny `UserSecretsId`; konfiguracja `ConnectionStrings:Portal`, `Git:*`, `Scan:*`; `api.Tests` dostaje `ProjectReference` do `worker`, jeśli testy go wymagają; folder najwyższego poziomu `worker/` (`AGENTS.md`).
+**Contract**: osobny `UserSecretsId`; konfiguracja `ConnectionStrings:Portal`, `Git:*`, `Scan:*`; folder najwyższego poziomu `worker/` (`AGENTS.md`). `api.Tests` **nie** referencjonuje `worker`: logika pipeline'u jest w `core`, a dwa projekty z instrukcjami najwyższego poziomu dałyby niejednoznaczny typ `Program` (api ma `public partial class Program`).
 
 ### Success Criteria:
 
 #### Automated Verification:
 
 - Budowanie przechodzi: `dotnet build worker` oraz `dotnet build api`
-- Testy pipeline'u z prawdziwą bazą i atrapami przechodzą (completed, incomplete, każdy `FailureReason`, sprzątanie katalogu, brak PAT w `FailureDetail`, wzorzec zaktualizowany po ponownym rozwiązaniu): `dotnet test api.Tests --filter "FullyQualifiedName~ScanJobRunner"`
+- Testy pipeline'u z prawdziwą bazą i atrapami przechodzą (completed, incomplete, każdy `FailureReason`, wzorzec usunięty lub nieaktywny, sprzątanie katalogu, brak PAT w `FailureDetail`, wiersz wzorca niezmieniony po ponownym rozwiązaniu): `dotnet test api.Tests --filter "FullyQualifiedName~ScanJobRunner"`
 - Claim jest atomowy (dwa równoległe claimy, jeden wygrywa) i odzyskiwanie po restarcie działa: `dotnet test api.Tests --filter "FullyQualifiedName~ScanQueue"`
 - Istniejący test `resolve` nadal przechodzi: `dotnet test api.Tests --filter "FullyQualifiedName~RepositoryEndpointsTests"`
 
@@ -262,13 +254,13 @@ Endpointy do uruchomienia skanu i odczytu wyniku oraz skrót ostatniego skanu w 
 
 **Intent**: `PatternResponse` zyskuje opcjonalny `LatestScan` (id, status, zakończono, liczba podatności), żeby strona repozytorium nie robiła zapytania na wzorzec.
 
-**Contract**: nowe pole nullable, bez zmiany istniejących pól.
+**Contract**: nowe pole nullable, bez zmiany istniejących pól. „Ostatni" skan wzorca to ten z najwyższym `Id` na `PatternId` (przy równym `RequestedAt` rozstrzyga `Id`). `LatestScan` liczy jedno zapytanie grupujące, wywoływane tylko w `GET /api/repos/{id}`; `PatternResponse.From` dostaje opcjonalny parametr, a odpowiedzi `add`, `activate`, `deactivate` i `resolve` zwracają `LatestScan = null` (UI i tak je rewaliduje po akcji).
 
 ### Success Criteria:
 
 #### Automated Verification:
 
-- Testy endpointów przechodzą (202, 404, 409 nieaktywny, 409 aktywny z id, wyścig, sortowanie z `Unknown` na końcu, scalone duplikaty, audyt, `LatestScan` w szczegółach repozytorium): `dotnet test api.Tests --filter "FullyQualifiedName~ScanEndpointsTests"`
+- Testy endpointów przechodzą (202, 404, 409 nieaktywny, 409 aktywny z id, wyścig, sortowanie z `Unknown` na końcu, scalone duplikaty, audyt, `LatestScan` w szczegółach repozytorium jako skan o najwyższym `Id` przy dwóch skanach): `dotnet test api.Tests --filter "FullyQualifiedName~ScanEndpointsTests"`
 - Nowe ścieżki mają wiersze „401 bez ciasteczka" w `NoPublicEndpointsTests`: `dotnet test api.Tests --filter "FullyQualifiedName~NoPublicEndpointsTests"`
 - Całość testów API zielona: `dotnet test api.Tests`
 - Budowanie przechodzi: `dotnet build api`
@@ -293,7 +285,7 @@ Akcja „Skanuj", strona wyniku z odświeżaniem stanu, wspólny komponent listy
 
 **Intent**: Nowy `intent` `scan` w `clientAction` (POST, przekierowanie na stronę skanu; `409 active` przekierowuje na trwający skan) i skrót `LatestScan` w `PatternRow` jako `Badge` statusu. Typy kontraktu obok istniejących, z komentarzem wskazującym plik C#.
 
-**Contract**: przycisk „Skanuj" tylko dla aktywnego wzorca; stan zajętości jak dla pozostałych intentów (`busy`).
+**Contract**: przycisk „Skanuj" tylko dla aktywnego wzorca; stan zajętości jak dla pozostałych intentów (`busy`). Unia `AuditAction` w `patterns.ts` i `describeEvent` dostają przypadek `ScanRequested` z polską etykietą (inaczej „Historia zmian" pokaże surowy tekst, `describeEvent` ma `default: return event.action`). Skrót skanu w wierszu wzorca pokazuje przeskanowany tag (np. „przeskanowano 2.1.11"), bo wiersz wzorca może pokazywać inny tag z ostatniego „Sprawdź".
 
 #### 2. Strona skanu
 
@@ -301,7 +293,7 @@ Akcja „Skanuj", strona wyniku z odświeżaniem stanu, wspólny komponent listy
 
 **Intent**: Trasa `/repos/:repoId/scans/:scanId` wewnątrz layoutu aplikacji, `clientLoader` z `GET /api/scans/{id}`, okresowe odświeżanie (`useRevalidator`) dopóki status to `Queued`/`Running`.
 
-**Contract**: widoczne stany: oczekuje/trwa, `Completed` z listą albo „brak wyników", `Incomplete` z `Alert` ostrzegawczym i listą brakujących plików blokady (także gdy wyników zero, wtedy bez „brak wyników"), `Failed` z `Alert` i przyczyną po polsku. Nagłówki przez `PageHeading` / `SectionHeading`.
+**Contract**: nagłówek strony pokazuje metadane skanu: przeskanowany tag i commit (skrócony), czas zakończenia, wiek bazy Trivy i wersję Trivy. Stan `Queued` dłużej niż 2 minuty (na podstawie `RequestedAt`) pokazuje `Alert` ostrzegawczy „Worker może nie działać"; bez heartbeatu. Widoczne stany: oczekuje/trwa, `Completed` z listą albo „brak wyników", `Incomplete` z `Alert` ostrzegawczym i listą brakujących plików blokady (także gdy wyników zero, wtedy bez „brak wyników"), `Failed` z `Alert` i przyczyną po polsku. Nagłówki przez `PageHeading` / `SectionHeading`.
 
 #### 3. Komponent listy podatności i styleguide
 
@@ -335,6 +327,7 @@ Akcja „Skanuj", strona wyniku z odświeżaniem stanu, wspólny komponent listy
 - Skan czystego repozytorium z lock file pokazuje „brak wyników", a awaria (np. zły adres bazy Trivy) pokazuje błąd z przyczyną
 - Nawigacja klawiaturą i widoczny fokus na nowych elementach; wylogowanie w trakcie przekierowuje na `/login`
 - `AGENTS.md` opisuje worker, opcje `Scan:*` i polecenie uruchomienia
+- Skan w stanie `Queued` dłużej niż 2 minuty (przy zatrzymanym workerze) pokazuje ostrzeżenie, że worker może nie działać, a „Historia zmian" pokazuje polską etykietę dla zdarzenia skanu
 
 ---
 
@@ -388,7 +381,7 @@ Migracja `AddScans` jest addytywna (`infrastructure.md:162`). Kolejność wdroż
 - [ ] 1.1 Budowanie przechodzi: `dotnet build api`
 - [ ] 1.2 Istniejące testy Git przechodzą bez zmian: `dotnet test api.Tests --filter "FullyQualifiedName~Git"`
 - [ ] 1.3 Testy runnera przechodzą (kod wyjścia, kod niezerowy, nieistniejący plik, timeout zabija drzewo procesów, ucięcie wyjścia): `dotnet test api.Tests --filter "FullyQualifiedName~ProcessRunner"`
-- [ ] 1.4 Testy checkoutu z atrapą runnera przechodzą (argumenty, token tylko w env, `CommitMismatch`, błąd klonu): `dotnet test api.Tests --filter "FullyQualifiedName~GitCheckout"`
+- [ ] 1.4 Testy checkoutu z atrapą runnera przechodzą (argumenty, token tylko w env, brak krótkiego limitu transferu w klonie, `CommitMismatch`, błąd klonu): `dotnet test api.Tests --filter "FullyQualifiedName~GitCheckout"`
 
 #### Manual
 
@@ -424,7 +417,7 @@ Migracja `AddScans` jest addytywna (`infrastructure.md:162`). Kolejność wdroż
 #### Automated
 
 - [ ] 4.1 Budowanie przechodzi: `dotnet build worker` oraz `dotnet build api`
-- [ ] 4.2 Testy pipeline'u z prawdziwą bazą i atrapami przechodzą (completed, incomplete, każdy `FailureReason`, sprzątanie katalogu, brak PAT w `FailureDetail`, wzorzec zaktualizowany po ponownym rozwiązaniu): `dotnet test api.Tests --filter "FullyQualifiedName~ScanJobRunner"`
+- [ ] 4.2 Testy pipeline'u z prawdziwą bazą i atrapami przechodzą (completed, incomplete, każdy `FailureReason`, wzorzec usunięty lub nieaktywny, sprzątanie katalogu, brak PAT w `FailureDetail`, wiersz wzorca niezmieniony po ponownym rozwiązaniu): `dotnet test api.Tests --filter "FullyQualifiedName~ScanJobRunner"`
 - [ ] 4.3 Claim jest atomowy (dwa równoległe claimy, jeden wygrywa) i odzyskiwanie po restarcie działa: `dotnet test api.Tests --filter "FullyQualifiedName~ScanQueue"`
 - [ ] 4.4 Istniejący test `resolve` nadal przechodzi: `dotnet test api.Tests --filter "FullyQualifiedName~RepositoryEndpointsTests"`
 
@@ -437,7 +430,7 @@ Migracja `AddScans` jest addytywna (`infrastructure.md:162`). Kolejność wdroż
 
 #### Automated
 
-- [ ] 5.1 Testy endpointów przechodzą (202, 404, 409 nieaktywny, 409 aktywny z id, wyścig, sortowanie z `Unknown` na końcu, scalone duplikaty, audyt, `LatestScan` w szczegółach repozytorium): `dotnet test api.Tests --filter "FullyQualifiedName~ScanEndpointsTests"`
+- [ ] 5.1 Testy endpointów przechodzą (202, 404, 409 nieaktywny, 409 aktywny z id, wyścig, sortowanie z `Unknown` na końcu, scalone duplikaty, audyt, `LatestScan` w szczegółach repozytorium jako skan o najwyższym `Id` przy dwóch skanach): `dotnet test api.Tests --filter "FullyQualifiedName~ScanEndpointsTests"`
 - [ ] 5.2 Nowe ścieżki mają wiersze „401 bez ciasteczka" w `NoPublicEndpointsTests`: `dotnet test api.Tests --filter "FullyQualifiedName~NoPublicEndpointsTests"`
 - [ ] 5.3 Całość testów API zielona: `dotnet test api.Tests`
 - [ ] 5.4 Budowanie przechodzi: `dotnet build api`
@@ -462,3 +455,4 @@ Migracja `AddScans` jest addytywna (`infrastructure.md:162`). Kolejność wdroż
 - [ ] 6.7 Skan czystego repozytorium z lock file pokazuje „brak wyników", a awaria (np. zły adres bazy Trivy) pokazuje błąd z przyczyną
 - [ ] 6.8 Nawigacja klawiaturą i widoczny fokus na nowych elementach; wylogowanie w trakcie przekierowuje na `/login`
 - [ ] 6.9 `AGENTS.md` opisuje worker, opcje `Scan:*` i polecenie uruchomienia
+- [ ] 6.10 Skan w stanie `Queued` dłużej niż 2 minuty (przy zatrzymanym workerze) pokazuje ostrzeżenie, że worker może nie działać, a „Historia zmian" pokazuje polską etykietę dla zdarzenia skanu

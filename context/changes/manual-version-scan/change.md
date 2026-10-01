@@ -1,7 +1,7 @@
 ---
 change_id: manual-version-scan
 title: Manual version scan
-status: planned
+status: plan_reviewed
 created: 2026-09-30
 updated: 2026-10-01
 archived_at: null
