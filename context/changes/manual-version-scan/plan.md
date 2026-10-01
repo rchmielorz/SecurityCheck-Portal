@@ -443,16 +443,16 @@ Migracja `AddScans` jest addytywna (`infrastructure.md:162`). Kolejność wdroż
 
 #### Automated
 
-- [x] 6.1 Typy i trasy są spójne: `cd web && npm run typecheck`
-- [x] 6.2 Brak zakodowanych wartości w zmienionych plikach (regex z `AGENTS.md`, oczekiwane 0 trafień)
-- [x] 6.3 SPA buduje się i trafia do API: `cd web && npm run build:api`
-- [x] 6.4 Backend nadal się buduje: `dotnet build api`
+- [x] 6.1 Typy i trasy są spójne: `cd web && npm run typecheck` — ad6f650
+- [x] 6.2 Brak zakodowanych wartości w zmienionych plikach (regex z `AGENTS.md`, oczekiwane 0 trafień) — ad6f650
+- [x] 6.3 SPA buduje się i trafia do API: `cd web && npm run build:api` — ad6f650
+- [x] 6.4 Backend nadal się buduje: `dotnet build api` — ad6f650
 
 #### Manual
 
-- [x] 6.5 `/styleguide` pokazuje listę podatności we wszystkich stanach w trybie jasnym i ciemnym, kontrast AA zachowany
-- [x] 6.6 Pełny przepływ lokalnie (API + worker + UI): „Skanuj" przenosi na stronę skanu, stan odświeża się bez przeładowania, widać listę posortowaną od critical, a repozytorium bez lock file kończy się ostrzeżeniem „niepełny"
-- [x] 6.7 Skan czystego repozytorium z lock file pokazuje „brak wyników", a awaria (np. zły adres bazy Trivy) pokazuje błąd z przyczyną
-- [x] 6.8 Nawigacja klawiaturą i widoczny fokus na nowych elementach; wylogowanie w trakcie przekierowuje na `/login`
-- [x] 6.9 `AGENTS.md` opisuje worker, opcje `Scan:*` i polecenie uruchomienia
-- [x] 6.10 Skan w stanie `Queued` dłużej niż 2 minuty (przy zatrzymanym workerze) pokazuje ostrzeżenie, że worker może nie działać, a „Historia zmian" pokazuje polską etykietę dla zdarzenia skanu
+- [x] 6.5 `/styleguide` pokazuje listę podatności we wszystkich stanach w trybie jasnym i ciemnym, kontrast AA zachowany — ad6f650
+- [x] 6.6 Pełny przepływ lokalnie (API + worker + UI): „Skanuj" przenosi na stronę skanu, stan odświeża się bez przeładowania, widać listę posortowaną od critical, a repozytorium bez lock file kończy się ostrzeżeniem „niepełny" — ad6f650
+- [x] 6.7 Skan czystego repozytorium z lock file pokazuje „brak wyników", a awaria (np. zły adres bazy Trivy) pokazuje błąd z przyczyną — ad6f650
+- [x] 6.8 Nawigacja klawiaturą i widoczny fokus na nowych elementach; wylogowanie w trakcie przekierowuje na `/login` — ad6f650
+- [x] 6.9 `AGENTS.md` opisuje worker, opcje `Scan:*` i polecenie uruchomienia — ad6f650
+- [x] 6.10 Skan w stanie `Queued` dłużej niż 2 minuty (przy zatrzymanym workerze) pokazuje ostrzeżenie, że worker może nie działać, a „Historia zmian" pokazuje polską etykietę dla zdarzenia skanu — ad6f650
