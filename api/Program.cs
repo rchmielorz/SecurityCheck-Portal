@@ -7,6 +7,7 @@ using securitycheck_portal.Auth;
 using securitycheck_portal.Core.Data;
 using securitycheck_portal.Core.Git;
 using securitycheck_portal.Repositories;
+using securitycheck_portal.Scans;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -140,6 +141,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapAuthEndpoints();
 app.MapRepositoryEndpoints();
+app.MapScanEndpoints();
 
 // Unknown /api routes must not fall through to index.html. Anonymous callers get 401 from the
 // fallback policy; authenticated ones get 404.

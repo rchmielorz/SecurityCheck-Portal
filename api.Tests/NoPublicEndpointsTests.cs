@@ -49,6 +49,8 @@ public sealed class NoPublicEndpointsTests(PortalFactory factory) : IClassFixtur
     [InlineData("GET", "/api/does-not-exist")]
     [InlineData("GET", "/api/repos")]
     [InlineData("POST", "/api/patterns/1/resolve")]
+    [InlineData("POST", "/api/patterns/1/scans")]
+    [InlineData("GET", "/api/scans/1")]
     public async Task Api_requests_without_cookie_get_401_and_no_html(string method, string path)
     {
         using var client = factory.CreatePortalClient();

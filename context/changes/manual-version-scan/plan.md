@@ -416,28 +416,28 @@ Migracja `AddScans` jest addytywna (`infrastructure.md:162`). Kolejność wdroż
 
 #### Automated
 
-- [x] 4.1 Budowanie przechodzi: `dotnet build worker` oraz `dotnet build api`
-- [x] 4.2 Testy pipeline'u z prawdziwą bazą i atrapami przechodzą (completed, incomplete, każdy `FailureReason`, wzorzec usunięty lub nieaktywny, sprzątanie katalogu, brak PAT w `FailureDetail`, wiersz wzorca niezmieniony po ponownym rozwiązaniu): `dotnet test api.Tests --filter "FullyQualifiedName~ScanJobRunner"`
-- [x] 4.3 Claim jest atomowy (dwa równoległe claimy, jeden wygrywa) i odzyskiwanie po restarcie działa: `dotnet test api.Tests --filter "FullyQualifiedName~ScanQueue"`
-- [x] 4.4 Istniejący test `resolve` nadal przechodzi: `dotnet test api.Tests --filter "FullyQualifiedName~RepositoryEndpointsTests"`
+- [x] 4.1 Budowanie przechodzi: `dotnet build worker` oraz `dotnet build api` — 039a859
+- [x] 4.2 Testy pipeline'u z prawdziwą bazą i atrapami przechodzą (completed, incomplete, każdy `FailureReason`, wzorzec usunięty lub nieaktywny, sprzątanie katalogu, brak PAT w `FailureDetail`, wiersz wzorca niezmieniony po ponownym rozwiązaniu): `dotnet test api.Tests --filter "FullyQualifiedName~ScanJobRunner"` — 039a859
+- [x] 4.3 Claim jest atomowy (dwa równoległe claimy, jeden wygrywa) i odzyskiwanie po restarcie działa: `dotnet test api.Tests --filter "FullyQualifiedName~ScanQueue"` — 039a859
+- [x] 4.4 Istniejący test `resolve` nadal przechodzi: `dotnet test api.Tests --filter "FullyQualifiedName~RepositoryEndpointsTests"` — 039a859
 
 #### Manual
 
-- [x] 4.5 `dotnet run --project worker` podejmuje wiersz `Queued` wstawiony ręcznie do bazy i kończy go statusem `Completed` lub `Incomplete` z prawdziwym Trivy
-- [x] 4.6 Zatrzymanie workera w trakcie skanu i ponowne uruchomienie ustawia skan na `Failed` z przyczyną „przerwany", a katalog w `WorkRoot` znika
+- [x] 4.5 `dotnet run --project worker` podejmuje wiersz `Queued` wstawiony ręcznie do bazy i kończy go statusem `Completed` lub `Incomplete` z prawdziwym Trivy — 039a859
+- [x] 4.6 Zatrzymanie workera w trakcie skanu i ponowne uruchomienie ustawia skan na `Failed` z przyczyną „przerwany", a katalog w `WorkRoot` znika — 039a859
 
 ### Phase 5: API skanów
 
 #### Automated
 
-- [ ] 5.1 Testy endpointów przechodzą (202, 404, 409 nieaktywny, 409 aktywny z id, wyścig, sortowanie z `Unknown` na końcu, scalone duplikaty, audyt, `LatestScan` w szczegółach repozytorium jako skan o najwyższym `Id` przy dwóch skanach): `dotnet test api.Tests --filter "FullyQualifiedName~ScanEndpointsTests"`
-- [ ] 5.2 Nowe ścieżki mają wiersze „401 bez ciasteczka" w `NoPublicEndpointsTests`: `dotnet test api.Tests --filter "FullyQualifiedName~NoPublicEndpointsTests"`
-- [ ] 5.3 Całość testów API zielona: `dotnet test api.Tests`
-- [ ] 5.4 Budowanie przechodzi: `dotnet build api`
+- [x] 5.1 Testy endpointów przechodzą (202, 404, 409 nieaktywny, 409 aktywny z id, wyścig, sortowanie z `Unknown` na końcu, scalone duplikaty, audyt, `LatestScan` w szczegółach repozytorium jako skan o najwyższym `Id` przy dwóch skanach): `dotnet test api.Tests --filter "FullyQualifiedName~ScanEndpointsTests"`
+- [x] 5.2 Nowe ścieżki mają wiersze „401 bez ciasteczka" w `NoPublicEndpointsTests`: `dotnet test api.Tests --filter "FullyQualifiedName~NoPublicEndpointsTests"`
+- [x] 5.3 Całość testów API zielona: `dotnet test api.Tests`
+- [x] 5.4 Budowanie przechodzi: `dotnet build api`
 
 #### Manual
 
-- [ ] 5.5 Przez `api/securitycheck-portal.http`: logowanie, `POST` skanu, odpytywanie `GET` aż do `Completed` przy działającym workerze
+- [x] 5.5 Przez `api/securitycheck-portal.http`: logowanie, `POST` skanu, odpytywanie `GET` aż do `Completed` przy działającym workerze
 
 ### Phase 6: UI i dokumentacja
 

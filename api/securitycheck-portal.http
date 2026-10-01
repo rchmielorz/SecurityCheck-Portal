@@ -69,9 +69,24 @@ POST {{host}}/api/patterns/{{addPattern.response.body.$.id}}/activate
 GET {{host}}/api/repos/{{addRepo.response.body.$.id}}/events
 Accept: application/json
 
-### 10. Logout - expect 204 and the cookie cleared
+### 10. Request a scan - expect 202 with status Queued and a Location header;
+# a second request while it is Queued/Running returns 409 { "reason": "active", "scanId": N }
+# S-02 needs the worker running (dotnet run --project worker) and Scan:* user-secrets set.
+# @name requestScan
+POST {{host}}/api/patterns/{{addPattern.response.body.$.id}}/scans
+
+### 11. Scan result - expect 200; poll until status is Completed, Incomplete or Failed
+# Findings come sorted Critical, High, Medium, Low, Unknown.
+GET {{host}}/api/scans/{{requestScan.response.body.$.id}}
+Accept: application/json
+
+### 12. Repository details - expect patterns[].latestScan with the newest scan (id, status, finishedAt, findingsCount, scannedTag)
+GET {{host}}/api/repos/{{addRepo.response.body.$.id}}
+Accept: application/json
+
+### 13. Logout - expect 204 and the cookie cleared
 POST {{host}}/api/auth/logout
 
-### 11. Current user after logout - expect 401
+### 14. Current user after logout - expect 401
 GET {{host}}/api/me
 Accept: application/json

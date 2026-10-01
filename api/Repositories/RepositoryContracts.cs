@@ -19,6 +19,19 @@ public sealed record RepositoryDetails(
 /// <summary>Last resolution of a pattern; <see cref="State"/> is a <see cref="ResolutionState"/> name.</summary>
 public sealed record ResolutionResponse(string State, string? Tag, string? Commit, DateTimeOffset? ResolvedAt);
 
+/// <summary>
+/// Latest scan of a pattern (the one with the highest ID); <see cref="Status"/> is a <see cref="ScanStatus"/>
+/// name. <see cref="FindingsCount"/> counts stored findings, so it is 0 for scans that have none (not
+/// finished, failed, or clean); <see cref="ScannedTag"/> is null until the worker has resolved the pattern.
+/// </summary>
+public sealed record LatestScanResponse(
+    long Id,
+    string Status,
+    DateTimeOffset? FinishedAt,
+    int FindingsCount,
+    string? ScannedTag);
+
+/// <summary><see cref="LatestScan"/> is filled only by <c>GET /api/repos/{id}</c>; other responses leave it null.</summary>
 public sealed record PatternResponse(
     long Id,
     long RepositoryId,
@@ -26,9 +39,10 @@ public sealed record PatternResponse(
     bool IsActive,
     DateTimeOffset CreatedAt,
     string CreatedBy,
-    ResolutionResponse? LastResolution)
+    ResolutionResponse? LastResolution,
+    LatestScanResponse? LatestScan = null)
 {
-    public static PatternResponse From(VersionPattern pattern) => new(
+    public static PatternResponse From(VersionPattern pattern, LatestScanResponse? latestScan = null) => new(
         pattern.Id,
         pattern.RepositoryId,
         pattern.Pattern,
@@ -37,7 +51,8 @@ public sealed record PatternResponse(
         pattern.CreatedBy,
         pattern.LastResolutionState is { } state
             ? new ResolutionResponse(state.ToString(), pattern.LastResolvedTag, pattern.LastResolvedCommit, pattern.LastResolvedAt)
-            : null);
+            : null,
+        latestScan);
 }
 
 /// <summary>A change log entry; <see cref="Action"/> is an <see cref="AuditAction"/> name.</summary>

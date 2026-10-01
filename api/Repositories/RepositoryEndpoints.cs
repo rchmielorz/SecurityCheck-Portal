@@ -105,9 +105,45 @@ public static class RepositoryEndpoints
             .Include(r => r.Patterns.OrderBy(p => p.Id))
             .SingleOrDefaultAsync(r => r.Id == id, cancellationToken);
 
-        return repository is null
-            ? Results.NotFound()
-            : Results.Ok(ToDetails(repository, repository.Patterns));
+        if (repository is null)
+        {
+            return Results.NotFound();
+        }
+
+        var latestScans = await GetLatestScansAsync(db, repository.Patterns.Select(p => p.Id).ToList(), cancellationToken);
+        return Results.Ok(ToDetails(repository, repository.Patterns, latestScans));
+    }
+
+    /// <summary>The scan with the highest ID per pattern, in one grouping query.</summary>
+    private static async Task<Dictionary<long, LatestScanResponse>> GetLatestScansAsync(
+        PortalDbContext db, List<long> patternIds, CancellationToken cancellationToken)
+    {
+        if (patternIds.Count == 0)
+        {
+            return [];
+        }
+
+        var latest = await db.Scans
+            .AsNoTracking()
+            .Where(s => patternIds.Contains(s.PatternId))
+            .GroupBy(s => s.PatternId)
+            .Select(g => g
+                .OrderByDescending(s => s.Id)
+                .Select(s => new
+                {
+                    s.PatternId,
+                    s.Id,
+                    s.Status,
+                    s.FinishedAt,
+                    s.ScannedTag,
+                    FindingsCount = s.Findings.Count,
+                })
+                .First())
+            .ToListAsync(cancellationToken);
+
+        return latest.ToDictionary(
+            s => s.PatternId,
+            s => new LatestScanResponse(s.Id, s.Status.ToString(), s.FinishedAt, s.FindingsCount, s.ScannedTag));
     }
 
     private static async Task<IResult> DeleteRepositoryAsync(
@@ -466,13 +502,18 @@ public static class RepositoryEndpoints
         _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null),
     };
 
-    private static RepositoryDetails ToDetails(Repository repository, IEnumerable<VersionPattern> patterns) => new(
+    private static RepositoryDetails ToDetails(
+        Repository repository,
+        IEnumerable<VersionPattern> patterns,
+        IReadOnlyDictionary<long, LatestScanResponse>? latestScans = null) => new(
         repository.Id,
         repository.Url,
         repository.Name,
         repository.CreatedAt,
         repository.CreatedBy,
-        patterns.Select(PatternResponse.From).ToList());
+        patterns
+            .Select(p => PatternResponse.From(p, latestScans is not null && latestScans.TryGetValue(p.Id, out var scan) ? scan : null))
+            .ToList());
 
     private enum SaveOutcome
     {
