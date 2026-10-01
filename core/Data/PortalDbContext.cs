@@ -12,6 +12,10 @@ public sealed class PortalDbContext(DbContextOptions<PortalDbContext> options) :
 
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
 
+    public DbSet<Scan> Scans => Set<Scan>();
+
+    public DbSet<ScanFinding> ScanFindings => Set<ScanFinding>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Repository>(repository =>
@@ -53,6 +57,52 @@ public sealed class PortalDbContext(DbContextOptions<PortalDbContext> options) :
             auditEvent.Property(e => e.RepositoryUrl).HasMaxLength(Repository.UrlMaxLength);
             auditEvent.Property(e => e.Pattern).HasMaxLength(VersionPattern.PatternMaxLength);
             auditEvent.HasIndex(e => new { e.RepositoryId, e.OccurredAt });
+        });
+
+        // PatternId and RepositoryId are plain columns (no FK): scan history outlives the pattern and repository.
+        modelBuilder.Entity<Scan>(scan =>
+        {
+            scan.Property(s => s.RepositoryUrl).HasMaxLength(Repository.UrlMaxLength);
+            scan.Property(s => s.Pattern).HasMaxLength(VersionPattern.PatternMaxLength);
+            scan.Property(s => s.Status)
+                .HasConversion<string>()
+                .HasMaxLength(EnumTextMaxLength);
+            scan.Property(s => s.FailureReason)
+                .HasConversion<string>()
+                .HasMaxLength(EnumTextMaxLength);
+            scan.Property(s => s.FailureDetail).HasMaxLength(Scan.FailureDetailMaxLength);
+            scan.Property(s => s.RequestedBy).HasMaxLength(AuditEvent.ActorMaxLength);
+            scan.Property(s => s.ScannedTag).HasMaxLength(VersionPattern.TagMaxLength);
+            scan.Property(s => s.ScannedCommit)
+                .HasMaxLength(VersionPattern.CommitLength)
+                .IsFixedLength();
+            scan.Property(s => s.TrivyVersion).HasMaxLength(Scan.TrivyVersionMaxLength);
+
+            // At most one active (queued or running) scan per pattern.
+            scan.HasIndex(s => s.PatternId)
+                .IsUnique()
+                .HasFilter("\"Status\" IN ('Queued','Running')");
+            scan.HasIndex(s => new { s.PatternId, s.RequestedAt });
+        });
+
+        modelBuilder.Entity<ScanFinding>(finding =>
+        {
+            finding.Property(f => f.Library).HasMaxLength(ScanFinding.LibraryMaxLength);
+            finding.Property(f => f.InstalledVersion).HasMaxLength(ScanFinding.VersionMaxLength);
+            finding.Property(f => f.VulnerabilityId).HasMaxLength(ScanFinding.VulnerabilityIdMaxLength);
+            finding.Property(f => f.Severity)
+                .HasConversion<string>()
+                .HasMaxLength(EnumTextMaxLength);
+            finding.Property(f => f.FixedVersion).HasMaxLength(ScanFinding.VersionMaxLength);
+            finding.Property(f => f.Title).HasMaxLength(ScanFinding.TitleMaxLength);
+
+            finding.HasOne(f => f.Scan)
+                .WithMany(s => s.Findings)
+                .HasForeignKey(f => f.ScanId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            finding.HasIndex(f => new { f.ScanId, f.Library, f.InstalledVersion, f.VulnerabilityId })
+                .IsUnique();
         });
     }
 }

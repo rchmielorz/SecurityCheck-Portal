@@ -378,26 +378,26 @@ Migracja `AddScans` jest addytywna (`infrastructure.md:162`). Kolejność wdroż
 
 #### Automated
 
-- [x] 1.1 Budowanie przechodzi: `dotnet build api`
-- [x] 1.2 Istniejące testy Git przechodzą bez zmian: `dotnet test api.Tests --filter "FullyQualifiedName~Git"`
-- [x] 1.3 Testy runnera przechodzą (kod wyjścia, kod niezerowy, nieistniejący plik, timeout zabija drzewo procesów, ucięcie wyjścia): `dotnet test api.Tests --filter "FullyQualifiedName~ProcessRunner"`
-- [x] 1.4 Testy checkoutu z atrapą runnera przechodzą (argumenty, token tylko w env, brak krótkiego limitu transferu w klonie, `CommitMismatch`, błąd klonu): `dotnet test api.Tests --filter "FullyQualifiedName~GitCheckout"`
+- [x] 1.1 Budowanie przechodzi: `dotnet build api` — 8196cf3
+- [x] 1.2 Istniejące testy Git przechodzą bez zmian: `dotnet test api.Tests --filter "FullyQualifiedName~Git"` — 8196cf3
+- [x] 1.3 Testy runnera przechodzą (kod wyjścia, kod niezerowy, nieistniejący plik, timeout zabija drzewo procesów, ucięcie wyjścia): `dotnet test api.Tests --filter "FullyQualifiedName~ProcessRunner"` — 8196cf3
+- [x] 1.4 Testy checkoutu z atrapą runnera przechodzą (argumenty, token tylko w env, brak krótkiego limitu transferu w klonie, `CommitMismatch`, błąd klonu): `dotnet test api.Tests --filter "FullyQualifiedName~GitCheckout"` — 8196cf3
 
 #### Manual
 
-- [x] 1.5 Test integracyjny pomijalny (zmienna `SCAN_IT_REPO_URL` + tag) klonuje prawdziwe repozytorium z wewnętrznego GitLaba i `HEAD` równa się commitowi z rozwiązania
+- [x] 1.5 Test integracyjny pomijalny (zmienna `SCAN_IT_REPO_URL` + tag) klonuje prawdziwe repozytorium z wewnętrznego GitLaba i `HEAD` równa się commitowi z rozwiązania — 8196cf3
 
 ### Phase 2: Model danych i migracja
 
 #### Automated
 
-- [ ] 2.1 Migracja nie zostawia niezatwierdzonych zmian modelu: `dotnet ef migrations has-pending-model-changes --project core --startup-project api`
-- [ ] 2.2 Testy schematu przechodzą (drugi aktywny skan tego samego wzorca odrzucony, po zakończeniu pierwszego dozwolony, unikalność wyników, kaskada usuwania wyników, skan przeżywa usunięcie wzorca): `dotnet test api.Tests --filter "FullyQualifiedName~SchemaTests"`
-- [ ] 2.3 Budowanie przechodzi: `dotnet build api`
+- [x] 2.1 Migracja nie zostawia niezatwierdzonych zmian modelu: `dotnet ef migrations has-pending-model-changes --project core --startup-project api`
+- [x] 2.2 Testy schematu przechodzą (drugi aktywny skan tego samego wzorca odrzucony, po zakończeniu pierwszego dozwolony, unikalność wyników, kaskada usuwania wyników, skan przeżywa usunięcie wzorca): `dotnet test api.Tests --filter "FullyQualifiedName~SchemaTests"`
+- [x] 2.3 Budowanie przechodzi: `dotnet build api`
 
 #### Manual
 
-- [ ] 2.4 `dotnet ef database update --project core --startup-project api` na lokalnej bazie tworzy tabele `Scans` i `ScanFindings`
+- [x] 2.4 `dotnet ef database update --project core --startup-project api` na lokalnej bazie tworzy tabele `Scans` i `ScanFindings`
 
 ### Phase 3: Trivy — uruchomienie, baza, parser
 

@@ -8,6 +8,7 @@ public enum AuditAction
     PatternDeleted,
     PatternActivated,
     PatternDeactivated,
+    ScanRequested,
 }
 
 /// <summary>
