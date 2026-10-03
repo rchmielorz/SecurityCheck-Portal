@@ -86,6 +86,69 @@ public sealed class LockFileDetectorTests : IDisposable
         Assert.Empty(_detector.FindMissing(_root));
     }
 
+    [Fact]
+    public void Csproj_with_packages_config_is_complete()
+    {
+        Touch("App.csproj");
+        Touch("packages.config");
+
+        Assert.Empty(_detector.FindMissing(_root));
+        Assert.Empty(_detector.FindDotnetProjectsWithoutLock(_root));
+    }
+
+    [Fact]
+    public void Csproj_without_lock_file_is_listed_as_project_without_lock()
+    {
+        Touch("src/App/App.csproj");
+
+        Assert.Equal(["src/App/packages.lock.json"], _detector.FindMissing(_root));
+        Assert.Equal(["src/App/App.csproj"], _detector.FindDotnetProjectsWithoutLock(_root));
+    }
+
+    [Fact]
+    public void Csproj_with_lock_file_is_not_listed_as_project_without_lock()
+    {
+        Touch("App.csproj");
+        Touch("packages.lock.json");
+
+        Assert.Empty(_detector.FindDotnetProjectsWithoutLock(_root));
+    }
+
+    [Fact]
+    public void Projects_without_lock_are_listed_across_nested_directories_in_ordinal_order()
+    {
+        Touch("b/B.csproj");
+        Touch("a/A.csproj");
+        Touch("a/nested/N.csproj");
+        Touch("c/C.csproj");
+        Touch("c/packages.lock.json");
+
+        Assert.Equal(["a/A.csproj", "a/nested/N.csproj", "b/B.csproj"], _detector.FindDotnetProjectsWithoutLock(_root));
+    }
+
+    [Fact]
+    public void Directory_with_two_csproj_lists_both_projects_and_one_lock_entry()
+    {
+        Touch("src/One.csproj");
+        Touch("src/Two.csproj");
+
+        Assert.Equal(["src/packages.lock.json"], _detector.FindMissing(_root));
+        Assert.Equal(["src/One.csproj", "src/Two.csproj"], _detector.FindDotnetProjectsWithoutLock(_root));
+    }
+
+    [Theory]
+    [InlineData("node_modules/lib/Lib.csproj")]
+    [InlineData(".git/hooks/Hook.csproj")]
+    [InlineData("bin/Debug/App.csproj")]
+    [InlineData("obj/App.csproj")]
+    [InlineData("src/node_modules/lib/Lib.csproj")]
+    public void Skipped_directories_are_not_searched_for_projects(string path)
+    {
+        Touch(path);
+
+        Assert.Empty(_detector.FindDotnetProjectsWithoutLock(_root));
+    }
+
     private void Touch(string relativePath)
     {
         var path = Path.Combine(_root, relativePath.Replace('/', Path.DirectorySeparatorChar));

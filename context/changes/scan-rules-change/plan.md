@@ -217,8 +217,8 @@ Brak migracji bazy. Wymaga zmiany na serwerze: SDK .NET, dostęp do feedów NuGe
 
 #### Automated
 
-- [ ] 1.1 Testy detektora przechodzą: `dotnet test --filter LockFileDetectorTests`
-- [ ] 1.2 Nowe testy: `.csproj` + `packages.config` → brak wpisu; `.csproj` bez lock-a → wpis w obu metodach; wiele projektów w zagnieżdżonych katalogach; katalogi pomijane
+- [x] 1.1 Testy detektora przechodzą: `dotnet test --filter LockFileDetectorTests`
+- [x] 1.2 Nowe testy: `.csproj` + `packages.config` → brak wpisu; `.csproj` bez lock-a → wpis w obu metodach; wiele projektów w zagnieżdżonych katalogach; katalogi pomijane
 
 ### Phase 2: Generator lock-ów
 

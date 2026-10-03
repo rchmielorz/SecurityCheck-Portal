@@ -3,7 +3,8 @@ namespace securitycheck_portal.Core.Scanning;
 /// <summary>
 /// Finds dependency manifests without their lock file. Trivy reads dependencies only from lock files, so
 /// such a checkout can look clean while being unscanned. The rule is conservative: it may report a missing
-/// lock file that Trivy would not need, never the other way round.
+/// lock file that Trivy would not need, never the other way round. The one exception is a .NET directory
+/// with a packages.config, which Trivy reads directly, so it is treated as complete.
 /// </summary>
 public sealed class LockFileDetector
 {
@@ -21,21 +22,38 @@ public sealed class LockFileDetector
     public IReadOnlyList<string> FindMissing(string checkoutDirectory)
     {
         var missing = new List<string>();
-        Walk(checkoutDirectory, "", missing);
+        Walk(checkoutDirectory, "", missing, []);
         missing.Sort(StringComparer.Ordinal);
         return missing;
     }
 
-    private static void Walk(string directory, string relative, List<string> missing)
+    /// <returns>
+    /// Relative paths (forward slashes, ordinal order) of the .csproj files for which a lock file could be
+    /// generated: those in a directory with neither a lock file nor a packages.config.
+    /// </returns>
+    public IReadOnlyList<string> FindDotnetProjectsWithoutLock(string checkoutDirectory)
+    {
+        var projects = new List<string>();
+        Walk(checkoutDirectory, "", [], projects);
+        projects.Sort(StringComparer.Ordinal);
+        return projects;
+    }
+
+    private static void Walk(string directory, string relative, List<string> missing, List<string> dotnetProjects)
     {
         var fileNames = Directory.EnumerateFiles(directory, "*", Enumeration)
             .Select(f => Path.GetFileName(f))
             .ToList();
 
-        if (fileNames.Any(f => f.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
-            && !fileNames.Contains("packages.lock.json", StringComparer.OrdinalIgnoreCase))
+        var csprojFiles = fileNames.Where(f => f.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)).ToList();
+
+        // packages.config is read by Trivy, so such a directory is complete without a lock file.
+        if (csprojFiles.Count > 0
+            && !fileNames.Contains("packages.lock.json", StringComparer.OrdinalIgnoreCase)
+            && !fileNames.Contains("packages.config", StringComparer.OrdinalIgnoreCase))
         {
             missing.Add(relative + "packages.lock.json");
+            dotnetProjects.AddRange(csprojFiles.Select(f => relative + f));
         }
 
         if (fileNames.Contains("package.json", StringComparer.OrdinalIgnoreCase)
@@ -52,7 +70,7 @@ public sealed class LockFileDetector
                 continue;
             }
 
-            Walk(child, relative + name + "/", missing);
+            Walk(child, relative + name + "/", missing, dotnetProjects);
         }
     }
 }
