@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using securitycheck_portal.Core.Data;
+using securitycheck_portal.Core.Scanning;
 using securitycheck_portal.Repositories;
 using securitycheck_portal.Scans;
 
@@ -44,7 +45,7 @@ public sealed class ScanEndpointsTests(DatabasePortalFactory factory) : IClassFi
         Assert.Null(details.FailureReason);
         Assert.Null(details.StartedAt);
         Assert.Null(details.FinishedAt);
-        Assert.Empty(details.MissingLockFiles);
+        Assert.Empty(details.Unscanned);
         Assert.Empty(details.Findings);
     }
 
@@ -314,7 +315,8 @@ public sealed class ScanEndpointsTests(DatabasePortalFactory factory) : IClassFi
                 scan.TrivyDbUpdatedAt = finishedAt.AddHours(-3);
                 scan.StartedAt = finishedAt.AddMinutes(-2);
                 scan.FinishedAt = finishedAt;
-                scan.MissingLockFiles = ["api/api.csproj"];
+                scan.UnscannedItems.Add(new ScanUnscannedItem { Path = "web/package.json", Reason = UnscannedReason.RestoreFailed, Detail = "restore failed" });
+                scan.UnscannedItems.Add(new ScanUnscannedItem { Path = "api/api.csproj", Reason = UnscannedReason.NoLockFile });
             });
 
         var details = await client.GetFromJsonAsync<ScanDetails>($"/api/scans/{scanId}");
@@ -326,7 +328,9 @@ public sealed class ScanEndpointsTests(DatabasePortalFactory factory) : IClassFi
         Assert.Equal("0.70.0", details.TrivyVersion);
         Assert.Equal(finishedAt.AddHours(-3), details.TrivyDbUpdatedAt);
         Assert.Equal(finishedAt, details.FinishedAt);
-        Assert.Equal(new[] { "api/api.csproj" }, details.MissingLockFiles);
+        Assert.Equal(
+            [("api/api.csproj", "NoLockFile", (string?)null), ("web/package.json", "RestoreFailed", "restore failed")],
+            details.Unscanned.Select(u => (u.Path, u.Reason, u.Detail)));
 
         var finding = Assert.Single(details.Findings);
         Assert.Equal("lodash", finding.Library);

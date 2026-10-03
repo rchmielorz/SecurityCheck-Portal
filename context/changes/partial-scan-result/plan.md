@@ -290,22 +290,22 @@ Migracja przenosi dane i usuwa kolumnę `MissingLockFiles` (z `Down`). API zmien
 
 #### Automated
 
-- [x] 2.1 Testy scanera przechodzą: `dotnet test api.Tests -c Release --filter TrivyScannerTests`
-- [x] 2.2 Nowe testy scanera: npm bez locka → `NoLockFile`; nieudany restore → `RestoreFailed` z szczegółem; katalog z wieloma `.csproj` → `MultipleProjects`; udany restore → `Completed` jak dotąd
-- [x] 2.3 Pełny zestaw: `dotnet test api.Tests -c Release`
+- [x] 2.1 Testy scanera przechodzą: `dotnet test api.Tests -c Release --filter TrivyScannerTests` — 654b987
+- [x] 2.2 Nowe testy scanera: npm bez locka → `NoLockFile`; nieudany restore → `RestoreFailed` z szczegółem; katalog z wieloma `.csproj` → `MultipleProjects`; udany restore → `Completed` jak dotąd — 654b987
+- [x] 2.3 Pełny zestaw: `dotnet test api.Tests -c Release` — 654b987
 
 ### Phase 3: Zapis i API
 
 #### Automated
 
-- [ ] 3.1 Budowanie: `dotnet build api -c Release` i `dotnet build worker -c Release`
-- [ ] 3.2 Testy zapisu i API przechodzą: `dotnet test api.Tests -c Release --filter "ScanJobRunnerTests|ScanEndpointsTests|SchemaTests"`
-- [ ] 3.3 Nowe testy: zapis pozycji z `Detail` oczyszczonym z tokenu i obciętym; kaskadowe usuwanie pozycji ze skanem (`SchemaTests`); odpowiedź API z `Unscanned`
-- [ ] 3.4 Pełny zestaw: `dotnet test api.Tests -c Release`
+- [x] 3.1 Budowanie: `dotnet build api -c Release` i `dotnet build worker -c Release`
+- [x] 3.2 Testy zapisu i API przechodzą: `dotnet test api.Tests -c Release --filter "ScanJobRunnerTests|ScanEndpointsTests|SchemaTests"`
+- [x] 3.3 Nowe testy: zapis pozycji z `Detail` oczyszczonym z tokenu i obciętym; kaskadowe usuwanie pozycji ze skanem (`SchemaTests`); odpowiedź API z `Unscanned`
+- [x] 3.4 Pełny zestaw: `dotnet test api.Tests -c Release`
 
 #### Manual
 
-- [ ] 3.5 Migracja na lokalnej bazie z istniejącym skanem `Incomplete` przechodzi (`dotnet ef database update --project core --startup-project api`), a stare ścieżki są w nowej tabeli z powodem `Unknown`; `database update <poprzednia migracja>` też przechodzi
+- [x] 3.5 Migracja na lokalnej bazie z istniejącym skanem `Incomplete` przechodzi (`dotnet ef database update --project core --startup-project api`), a stare ścieżki są w nowej tabeli z powodem `Unknown`; `database update <poprzednia migracja>` też przechodzi
 
 ### Phase 4: UI i dokumentacja
 

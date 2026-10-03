@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using securitycheck_portal.Core.Scanning;
 
 namespace securitycheck_portal.Core.Data;
 
@@ -15,6 +16,8 @@ public sealed class PortalDbContext(DbContextOptions<PortalDbContext> options) :
     public DbSet<Scan> Scans => Set<Scan>();
 
     public DbSet<ScanFinding> ScanFindings => Set<ScanFinding>();
+
+    public DbSet<ScanUnscannedItem> ScanUnscannedItems => Set<ScanUnscannedItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -103,6 +106,22 @@ public sealed class PortalDbContext(DbContextOptions<PortalDbContext> options) :
 
             finding.HasIndex(f => new { f.ScanId, f.Library, f.InstalledVersion, f.VulnerabilityId })
                 .IsUnique();
+        });
+
+        modelBuilder.Entity<ScanUnscannedItem>(item =>
+        {
+            item.Property(i => i.Path).HasMaxLength(UnscannedItem.PathMaxLength);
+            item.Property(i => i.Reason)
+                .HasConversion<string>()
+                .HasMaxLength(EnumTextMaxLength);
+            item.Property(i => i.Detail).HasMaxLength(UnscannedItem.DetailMaxLength);
+
+            item.HasOne(i => i.Scan)
+                .WithMany(s => s.UnscannedItems)
+                .HasForeignKey(i => i.ScanId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            item.HasIndex(i => new { i.ScanId, i.Path }).IsUnique();
         });
     }
 }

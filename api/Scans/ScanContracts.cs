@@ -45,8 +45,11 @@ public sealed record ScanDetails(
     string? ScannedCommit,
     string? TrivyVersion,
     DateTimeOffset? TrivyDbUpdatedAt,
-    IReadOnlyList<string> MissingLockFiles,
+    IReadOnlyList<UnscannedItemResponse> Unscanned,
     IReadOnlyList<ScanFindingResponse> Findings);
+
+/// <summary>A manifest that was not scanned; <see cref="Reason"/> is an <c>UnscannedReason</c> name.</summary>
+public sealed record UnscannedItemResponse(string Path, string Reason, string? Detail);
 
 /// <summary>
 /// Body of a 409 on requesting a scan: <see cref="Active"/> (a queued or running scan exists, see

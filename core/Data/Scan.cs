@@ -71,8 +71,8 @@ public sealed class Scan
 
     public DateTimeOffset? TrivyDbUpdatedAt { get; set; }
 
-    /// <summary>Dependency manifests found without their lock file.</summary>
-    public string[] MissingLockFiles { get; set; } = [];
-
     public List<ScanFinding> Findings { get; } = [];
+
+    /// <summary>Dependency manifests that were not scanned, with the reason.</summary>
+    public List<ScanUnscannedItem> UnscannedItems { get; } = [];
 }

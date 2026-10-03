@@ -99,6 +99,7 @@ public static class ScanEndpoints
         var scan = await db.Scans
             .AsNoTracking()
             .Include(s => s.Findings)
+            .Include(s => s.UnscannedItems)
             .SingleOrDefaultAsync(s => s.Id == id, cancellationToken);
 
         return scan is null ? Results.NotFound() : Results.Ok(ToDetails(scan));
@@ -122,6 +123,11 @@ public static class ScanEndpoints
                 f.Targets))
             .ToList();
 
+        var unscanned = scan.UnscannedItems
+            .OrderBy(i => i.Path, StringComparer.Ordinal)
+            .Select(i => new UnscannedItemResponse(i.Path, i.Reason.ToString(), i.Detail))
+            .ToList();
+
         return new ScanDetails(
             scan.Id,
             scan.PatternId,
@@ -139,7 +145,7 @@ public static class ScanEndpoints
             scan.ScannedCommit,
             scan.TrivyVersion,
             scan.TrivyDbUpdatedAt,
-            scan.MissingLockFiles,
+            unscanned,
             findings);
     }
 

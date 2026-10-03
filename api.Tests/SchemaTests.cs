@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using securitycheck_portal.Core.Data;
+using securitycheck_portal.Core.Scanning;
 
 namespace securitycheck_portal.Tests;
 
@@ -166,6 +167,39 @@ public sealed class SchemaTests(DatabasePortalFactory factory) : IClassFixture<D
     }
 
     [SkippableFact]
+    public async Task Duplicate_unscanned_path_in_a_scan_violates_a_unique_constraint()
+    {
+        factory.SkipIfDatabaseUnavailable();
+        var scanId = await AddScanAsync(NewPatternId(), ScanStatus.Incomplete);
+        await AddUnscannedItemAsync(scanId);
+
+        await using var scope = factory.CreateDbScope(out var db);
+        db.ScanUnscannedItems.Add(NewUnscannedItem(scanId));
+
+        await AssertPostgresErrorAsync(PostgresErrorCodes.UniqueViolation, () => db.SaveChangesAsync());
+    }
+
+    [SkippableFact]
+    public async Task Deleting_a_scan_deletes_its_unscanned_items()
+    {
+        factory.SkipIfDatabaseUnavailable();
+        var scanId = await AddScanAsync(NewPatternId(), ScanStatus.Incomplete);
+        await AddUnscannedItemAsync(scanId);
+
+        await using (var scope = factory.CreateDbScope(out var db))
+        {
+            var scan = await db.Scans.SingleAsync(s => s.Id == scanId);
+            db.Scans.Remove(scan);
+            await db.SaveChangesAsync();
+        }
+
+        await using (var scope = factory.CreateDbScope(out var db))
+        {
+            Assert.False(await db.ScanUnscannedItems.AnyAsync(i => i.ScanId == scanId));
+        }
+    }
+
+    [SkippableFact]
     public async Task Deleting_a_pattern_and_its_repository_keeps_the_scan_and_its_findings()
     {
         factory.SkipIfDatabaseUnavailable();
@@ -218,6 +252,21 @@ public sealed class SchemaTests(DatabasePortalFactory factory) : IClassFixture<D
             VulnerabilityId = "CVE-2021-23337",
             Severity = FindingSeverity.High,
         };
+
+    private static ScanUnscannedItem NewUnscannedItem(long scanId) =>
+        new()
+        {
+            ScanId = scanId,
+            Path = "src/app/packages.lock.json",
+            Reason = UnscannedReason.NoLockFile,
+        };
+
+    private async Task AddUnscannedItemAsync(long scanId)
+    {
+        await using var scope = factory.CreateDbScope(out var db);
+        db.ScanUnscannedItems.Add(NewUnscannedItem(scanId));
+        await db.SaveChangesAsync();
+    }
 
     private async Task<long> AddScanAsync(long patternId, ScanStatus status, long repositoryId = 0, string? url = null)
     {

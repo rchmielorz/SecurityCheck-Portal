@@ -74,7 +74,7 @@ public sealed class ScanJobRunnerTests : IClassFixture<DatabasePortalFactory>, I
         Assert.Equal("0.58.0", scan.TrivyVersion);
         Assert.Equal(DbDate, scan.TrivyDbUpdatedAt);
         Assert.NotNull(scan.FinishedAt);
-        Assert.Empty(scan.MissingLockFiles);
+        Assert.Empty(scan.UnscannedItems);
         Assert.Equal(["axios", "lodash"], scan.Findings.Select(f => f.Library).Order());
 
         Assert.Equal(DirectoryOf(seed), _checkout.TargetDirectory);
@@ -101,20 +101,56 @@ public sealed class ScanJobRunnerTests : IClassFixture<DatabasePortalFactory>, I
     }
 
     [SkippableFact]
-    public async Task Incomplete_scan_stores_findings_and_missing_lock_files()
+    public async Task Incomplete_scan_stores_findings_and_unscanned_items()
     {
         _factory.SkipIfDatabaseUnavailable();
         var seed = await SeedAsync();
         _scanner.Outcome = new ScanOutcome.Incomplete(
-            [Finding("lodash", "CVE-1", FindingSeverity.Critical)], [new UnscannedItem("src/app/packages.lock.json", UnscannedReason.NoLockFile)], "0.58.0", DbDate);
+            [Finding("lodash", "CVE-1", FindingSeverity.Critical)],
+            [
+                new UnscannedItem("src/app/packages.lock.json", UnscannedReason.NoLockFile),
+                new UnscannedItem("src/web/packages.lock.json", UnscannedReason.RestoreFailed, "restore exited with 1"),
+                new UnscannedItem("src/app/packages.lock.json", UnscannedReason.Unknown, "duplicate path"),
+            ],
+            "0.58.0", DbDate);
 
         await Runner.RunAsync(seed.ScanId, CancellationToken.None);
 
         var scan = await LoadAsync(seed.ScanId);
         Assert.Equal(ScanStatus.Incomplete, scan.Status);
-        Assert.Equal(["src/app/packages.lock.json"], scan.MissingLockFiles);
+        Assert.Equal(
+            [
+                ("src/app/packages.lock.json", UnscannedReason.NoLockFile, (string?)null),
+                ("src/web/packages.lock.json", UnscannedReason.RestoreFailed, "restore exited with 1"),
+            ],
+            scan.UnscannedItems.OrderBy(i => i.Path, StringComparer.Ordinal).Select(i => (i.Path, i.Reason, i.Detail)));
         Assert.Single(scan.Findings);
         Assert.Equal("2.1.10", scan.ScannedTag);
+    }
+
+    [SkippableFact]
+    public async Task Unscanned_item_detail_is_masked_and_clipped_and_path_is_clipped()
+    {
+        _factory.SkipIfDatabaseUnavailable();
+        var seed = await SeedAsync();
+        var longPath = new string('p', UnscannedItem.PathMaxLength + 50);
+        _scanner.Outcome = new ScanOutcome.Incomplete(
+            [],
+            [
+                new UnscannedItem("a/packages.lock.json", UnscannedReason.RestoreFailed, $"auth {Token} failed"),
+                new UnscannedItem("b/packages.lock.json", UnscannedReason.RestoreFailed, new string('x', 5000)),
+                new UnscannedItem("c/packages.lock.json", UnscannedReason.RestoreFailed, "  "),
+                new UnscannedItem(longPath, UnscannedReason.NoLockFile),
+            ],
+            "0.58.0", DbDate);
+
+        await Runner.RunAsync(seed.ScanId, CancellationToken.None);
+
+        var items = (await LoadAsync(seed.ScanId)).UnscannedItems.ToDictionary(i => i.Path);
+        Assert.Equal("auth *** failed", items["a/packages.lock.json"].Detail);
+        Assert.Equal(UnscannedItem.DetailMaxLength, items["b/packages.lock.json"].Detail!.Length);
+        Assert.Null(items["c/packages.lock.json"].Detail);
+        Assert.Equal(longPath[..UnscannedItem.PathMaxLength], Assert.Single(items, i => i.Key.Length == UnscannedItem.PathMaxLength).Key);
     }
 
     [SkippableTheory]
@@ -379,7 +415,7 @@ public sealed class ScanJobRunnerTests : IClassFixture<DatabasePortalFactory>, I
         Assert.Equal(ScanQueue.AbandonedDetail, scan.FailureDetail);
         Assert.Empty(scan.Findings);
         Assert.Null(scan.TrivyVersion);
-        Assert.Empty(scan.MissingLockFiles);
+        Assert.Empty(scan.UnscannedItems);
     }
 
     private async Task AssertNotResolvedAsync(Seed seed, string detailPart)
@@ -437,7 +473,7 @@ public sealed class ScanJobRunnerTests : IClassFixture<DatabasePortalFactory>, I
     private async Task<Scan> LoadAsync(long scanId)
     {
         await using var scope = _factory.CreateDbScope(out var db);
-        return await db.Scans.AsNoTracking().Include(s => s.Findings).SingleAsync(s => s.Id == scanId);
+        return await db.Scans.AsNoTracking().Include(s => s.Findings).Include(s => s.UnscannedItems).SingleAsync(s => s.Id == scanId);
     }
 
     private static ScanFinding Finding(string library, string id, FindingSeverity severity) => new()

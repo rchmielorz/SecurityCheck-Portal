@@ -203,8 +203,8 @@ public sealed class ScanJobRunner(
         string? failureDetail = null;
         string? trivyVersion = null;
         DateTimeOffset? dbUpdatedAt = null;
-        string[] missingLockFiles = [];
         IReadOnlyList<ScanFinding> findings = [];
+        IReadOnlyList<UnscannedItem> unscanned = [];
 
         switch (outcome)
         {
@@ -215,8 +215,7 @@ public sealed class ScanJobRunner(
             case ScanOutcome.Incomplete incomplete:
                 status = ScanStatus.Incomplete;
                 (findings, trivyVersion, dbUpdatedAt) = (incomplete.Findings, ClipVersion(incomplete.TrivyVersion), incomplete.DbUpdatedAt);
-                // TEMP (phase 3 of partial-scan-result): replaced by ScanUnscannedItem rows
-                missingLockFiles = [.. incomplete.Unscanned.Select(u => u.Path)];
+                unscanned = incomplete.Unscanned;
                 break;
             case ScanOutcome.Failed failed:
                 status = ScanStatus.Failed;
@@ -243,8 +242,7 @@ public sealed class ScanJobRunner(
                 .SetProperty(s => s.FailureReason, failureReason)
                 .SetProperty(s => s.FailureDetail, failureDetail)
                 .SetProperty(s => s.TrivyVersion, trivyVersion)
-                .SetProperty(s => s.TrivyDbUpdatedAt, dbUpdatedAt)
-                .SetProperty(s => s.MissingLockFiles, missingLockFiles),
+                .SetProperty(s => s.TrivyDbUpdatedAt, dbUpdatedAt),
                 cancellationToken);
 
         if (updated == 0)
@@ -260,9 +258,31 @@ public sealed class ScanJobRunner(
             db.ScanFindings.Add(finding);
         }
 
+        var seenPaths = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var item in unscanned)
+        {
+            var path = Clip(item.Path, UnscannedItem.PathMaxLength);
+            if (!seenPaths.Add(path))
+            {
+                continue;
+            }
+
+            var detail = item.Detail is null ? null : Clip(Sanitize(item.Detail), UnscannedItem.DetailMaxLength);
+            db.ScanUnscannedItems.Add(new ScanUnscannedItem
+            {
+                ScanId = scanId,
+                Path = path,
+                Reason = item.Reason,
+                Detail = string.IsNullOrEmpty(detail) ? null : detail,
+            });
+        }
+
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
     }
+
+    private static string Clip(string text, int maxLength)
+        => text.Length > maxLength ? text[..maxLength] : text;
 
     private static string ClipVersion(string trivyVersion)
         => trivyVersion.Length > Scan.TrivyVersionMaxLength ? trivyVersion[..Scan.TrivyVersionMaxLength] : trivyVersion;
