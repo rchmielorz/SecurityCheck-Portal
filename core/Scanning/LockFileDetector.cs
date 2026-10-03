@@ -22,24 +22,38 @@ public sealed class LockFileDetector
     public IReadOnlyList<string> FindMissing(string checkoutDirectory)
     {
         var missing = new List<string>();
-        Walk(checkoutDirectory, "", missing, []);
+        Walk(checkoutDirectory, "", missing, [], []);
         missing.Sort(StringComparer.Ordinal);
         return missing;
     }
 
     /// <returns>
     /// Relative paths (forward slashes, ordinal order) of the .csproj files for which a lock file could be
-    /// generated: those in a directory with neither a lock file nor a packages.config.
+    /// generated: the only .csproj of a directory with neither a lock file nor a packages.config.
     /// </returns>
     public IReadOnlyList<string> FindDotnetProjectsWithoutLock(string checkoutDirectory)
     {
         var projects = new List<string>();
-        Walk(checkoutDirectory, "", [], projects);
+        Walk(checkoutDirectory, "", [], projects, []);
         projects.Sort(StringComparer.Ordinal);
         return projects;
     }
 
-    private static void Walk(string directory, string relative, List<string> missing, List<string> dotnetProjects)
+    /// <returns>
+    /// Relative lock file paths (forward slashes, ordinal order) of directories with several .csproj files and
+    /// neither a lock file nor a packages.config: one lock file cannot be generated for them.
+    /// </returns>
+    public IReadOnlyList<string> FindDirectoriesWithMultipleProjects(string checkoutDirectory)
+    {
+        var directories = new List<string>();
+        Walk(checkoutDirectory, "", [], [], directories);
+        directories.Sort(StringComparer.Ordinal);
+        return directories;
+    }
+
+    private static void Walk(
+        string directory, string relative, List<string> missing, List<string> dotnetProjects,
+        List<string> multiProjectLocks)
     {
         var fileNames = Directory.EnumerateFiles(directory, "*", Enumeration)
             .Select(f => Path.GetFileName(f))
@@ -53,7 +67,14 @@ public sealed class LockFileDetector
             && !fileNames.Contains("packages.config", StringComparer.OrdinalIgnoreCase))
         {
             missing.Add(relative + "packages.lock.json");
-            dotnetProjects.AddRange(csprojFiles.Select(f => relative + f));
+            if (csprojFiles.Count == 1)
+            {
+                dotnetProjects.Add(relative + csprojFiles[0]);
+            }
+            else
+            {
+                multiProjectLocks.Add(relative + "packages.lock.json");
+            }
         }
 
         if (fileNames.Contains("package.json", StringComparer.OrdinalIgnoreCase)
@@ -70,7 +91,7 @@ public sealed class LockFileDetector
                 continue;
             }
 
-            Walk(child, relative + name + "/", missing, dotnetProjects);
+            Walk(child, relative + name + "/", missing, dotnetProjects, multiProjectLocks);
         }
     }
 }

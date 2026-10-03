@@ -168,6 +168,121 @@ public sealed class DotnetLockFileGeneratorTests : IDisposable
         Assert.True(File.Exists(lockPath));
     }
 
+    [Fact]
+    public async Task Successful_restores_yield_no_unscanned_items()
+    {
+        Touch("a/A.csproj");
+        Touch("B.csproj");
+
+        var unscanned = await Generator.GenerateAsync(_root, CancellationToken.None);
+
+        Assert.Empty(unscanned);
+    }
+
+    [Fact]
+    public async Task Failed_restore_is_reported_with_the_first_line_of_stderr()
+    {
+        Touch("src/App/App.csproj");
+        _dotnet.Results.Enqueue(new ProcessRunResult(
+            ProcessOutcome.Exited, 1, "stdout line", "error NU1101: Unable to find package\r\nsecond line"));
+
+        var unscanned = await Generator.GenerateAsync(_root, CancellationToken.None);
+
+        var item = Assert.Single(unscanned);
+        Assert.Equal("src/App/packages.lock.json", item.Path);
+        Assert.Equal(UnscannedReason.RestoreFailed, item.Reason);
+        Assert.Equal("error NU1101: Unable to find package", item.Detail);
+    }
+
+    [Fact]
+    public async Task Failed_restore_without_stderr_uses_the_first_line_of_stdout()
+    {
+        Touch("App.csproj");
+        _dotnet.Results.Enqueue(new ProcessRunResult(ProcessOutcome.Exited, 1, "build failed\nmore", ""));
+
+        var unscanned = await Generator.GenerateAsync(_root, CancellationToken.None);
+
+        var item = Assert.Single(unscanned);
+        Assert.Equal("packages.lock.json", item.Path);
+        Assert.Equal("build failed", item.Detail);
+    }
+
+    [Fact]
+    public async Task Timed_out_restore_is_reported()
+    {
+        Touch("a/A.csproj");
+        _dotnet.Results.Enqueue(new ProcessRunResult(ProcessOutcome.TimedOut, null, "", ""));
+
+        var unscanned = await Generator.GenerateAsync(_root, CancellationToken.None);
+
+        Assert.Equal([new UnscannedItem("a/packages.lock.json", UnscannedReason.RestoreTimedOut)], unscanned);
+    }
+
+    [Fact]
+    public async Task Dotnet_that_cannot_be_started_is_reported()
+    {
+        Touch("a/A.csproj");
+        _dotnet.Results.Enqueue(new ProcessRunResult(ProcessOutcome.StartFailed, null, "", ""));
+
+        var unscanned = await Generator.GenerateAsync(_root, CancellationToken.None);
+
+        Assert.Equal([new UnscannedItem("a/packages.lock.json", UnscannedReason.DotnetNotStarted)], unscanned);
+    }
+
+    [Fact]
+    public async Task Projects_skipped_because_the_budget_ran_out_are_reported()
+    {
+        Touch("a/A.csproj");
+        Touch("b/B.csproj");
+        Touch("c/C.csproj");
+        Touch("d/D.csproj");
+        _options.RestoreTotalTimeoutMinutes = 20;
+        _options.RestoreTimeoutMinutes = 10;
+        _dotnet.OnRun = _ => _time.Advance(TimeSpan.FromMinutes(12));
+
+        var unscanned = await Generator.GenerateAsync(_root, CancellationToken.None);
+
+        Assert.Equal(2, _dotnet.Calls.Count);
+        Assert.Equal(
+            [
+                new UnscannedItem("c/packages.lock.json", UnscannedReason.RestoreBudgetExceeded),
+                new UnscannedItem("d/packages.lock.json", UnscannedReason.RestoreBudgetExceeded),
+            ],
+            unscanned);
+    }
+
+    [Fact]
+    public async Task Directory_with_several_projects_is_reported_without_running_dotnet()
+    {
+        Touch("src/One.csproj");
+        Touch("src/Two.csproj");
+        Touch("ok/Ok.csproj");
+
+        var unscanned = await Generator.GenerateAsync(_root, CancellationToken.None);
+
+        Assert.Equal([new UnscannedItem("src/packages.lock.json", UnscannedReason.MultipleProjects)], unscanned);
+        var call = Assert.Single(_dotnet.Calls);
+        Assert.EndsWith("Ok.csproj", call.StartInfo.ArgumentList[1]);
+    }
+
+    [Fact]
+    public async Task Unscanned_items_are_sorted_by_path_without_duplicates()
+    {
+        Touch("z/Z.csproj");
+        Touch("m/One.csproj");
+        Touch("m/Two.csproj");
+        Touch("a/A.csproj");
+        _dotnet.Results.Enqueue(new ProcessRunResult(ProcessOutcome.TimedOut, null, "", ""));
+        _dotnet.Results.Enqueue(new ProcessRunResult(ProcessOutcome.TimedOut, null, "", ""));
+
+        var unscanned = await Generator.GenerateAsync(_root, CancellationToken.None);
+
+        Assert.Equal(
+            ["a/packages.lock.json", "m/packages.lock.json", "z/packages.lock.json"],
+            unscanned.Select(i => i.Path));
+        Assert.Equal(UnscannedReason.MultipleProjects, unscanned[1].Reason);
+    }
+
     private void Touch(string relativePath)
     {
         var path = Path.Combine(_root, relativePath.Replace('/', Path.DirectorySeparatorChar));

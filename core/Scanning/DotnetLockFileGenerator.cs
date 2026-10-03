@@ -11,6 +11,9 @@ namespace securitycheck_portal.Core.Scanning;
 /// <c>dotnet restore &lt;project&gt; --use-lock-file</c> in the checkout (the checkout is deleted after the scan).
 /// Best effort: a project whose restore fails, times out or cannot be started is logged and skipped, and stays
 /// in <see cref="LockFileDetector.FindMissing"/>, which decides between completed and incomplete afterwards.
+/// <see cref="GenerateAsync"/> also returns an <see cref="UnscannedItem"/> with the reason for every lock file it
+/// could not produce (restore failed, timed out, dotnet not started, budget used up, or a directory with several
+/// projects, for which dotnet is not run).
 /// Accepted risk: <c>dotnet restore</c> evaluates MSBuild files from the repository (<c>Directory.Build.targets</c>,
 /// the project itself, <c>global.json</c> msbuild-sdks) and honors a <c>NuGet.config</c> found in the checkout, so
 /// repository content runs with the rights of the worker account. All this class does about it is keep our own
@@ -36,13 +39,21 @@ public sealed class DotnetLockFileGenerator(
         "USERPROFILE", "APPDATA", "LOCALAPPDATA", "HOME", "ProgramData", "ProgramFiles",
     ];
 
-    public async Task GenerateAsync(string checkoutDirectory, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<UnscannedItem>> GenerateAsync(
+        string checkoutDirectory, CancellationToken cancellationToken)
     {
         var settings = options.Value;
         var perProject = TimeSpan.FromMinutes(settings.RestoreTimeoutMinutes);
         var budget = TimeSpan.FromMinutes(settings.RestoreTotalTimeoutMinutes);
         var started = timeProvider.GetUtcNow();
         var projects = lockFileDetector.FindDotnetProjectsWithoutLock(checkoutDirectory);
+        var unscanned = new Dictionary<string, UnscannedItem>(StringComparer.Ordinal);
+
+        // One lock file cannot be generated for several projects in a directory, so dotnet is not run for them.
+        foreach (var lockRelative in lockFileDetector.FindDirectoriesWithMultipleProjects(checkoutDirectory))
+        {
+            unscanned[lockRelative] = new UnscannedItem(lockRelative, UnscannedReason.MultipleProjects);
+        }
 
         for (var i = 0; i < projects.Count; i++)
         {
@@ -52,7 +63,13 @@ public sealed class DotnetLockFileGenerator(
                 logger.LogWarning(
                     "dotnet restore budget of {Minutes} minutes used up; {Count} project(s) not restored",
                     settings.RestoreTotalTimeoutMinutes, projects.Count - i);
-                return;
+                for (var j = i; j < projects.Count; j++)
+                {
+                    var skipped = LockRelativePath(projects[j]);
+                    unscanned[skipped] = new UnscannedItem(skipped, UnscannedReason.RestoreBudgetExceeded);
+                }
+
+                break;
             }
 
             var project = projects[i];
@@ -64,31 +81,48 @@ public sealed class DotnetLockFileGenerator(
                 CreateStartInfo(settings, projectPath), remaining < perProject ? remaining : perProject,
                 MaxCapturedChars, cancellationToken);
 
-            var failed = true;
+            UnscannedItem? failure = null;
+            var lockRelative = LockRelativePath(project);
             switch (result.Outcome)
             {
                 case ProcessOutcome.StartFailed:
                     logger.LogWarning("dotnet could not be started to restore {Project}", project);
+                    failure = new UnscannedItem(lockRelative, UnscannedReason.DotnetNotStarted);
                     break;
                 case ProcessOutcome.TimedOut:
                     logger.LogWarning("dotnet restore of {Project} did not finish in time", project);
+                    failure = new UnscannedItem(lockRelative, UnscannedReason.RestoreTimedOut);
                     break;
                 case ProcessOutcome.Exited when result.ExitCode != 0:
+                    var firstLine = TextHelpers.FirstLine(
+                        string.IsNullOrWhiteSpace(result.Stderr) ? result.Stdout : result.Stderr);
                     logger.LogWarning("dotnet restore of {Project} exited with code {ExitCode}: {Output}",
-                        project, result.ExitCode,
-                        TextHelpers.FirstLine(string.IsNullOrWhiteSpace(result.Stderr) ? result.Stdout : result.Stderr));
-                    break;
-                default:
-                    failed = false;
+                        project, result.ExitCode, firstLine);
+                    failure = new UnscannedItem(
+                        lockRelative, UnscannedReason.RestoreFailed, firstLine.Length == 0 ? null : firstLine);
                     break;
             }
 
-            // A killed or failed restore may leave a half-written lock file, which would count as "present".
-            if (failed && !lockExisted)
+            if (failure is not null)
             {
-                TryDelete(lockPath);
+                unscanned[failure.Path] = failure;
+
+                // A killed or failed restore may leave a half-written lock file, which would count as "present".
+                if (!lockExisted)
+                {
+                    TryDelete(lockPath);
+                }
             }
         }
+
+        return unscanned.Values.OrderBy(item => item.Path, StringComparer.Ordinal).ToList();
+    }
+
+    /// <summary>The lock file path of a project, relative to the checkout, in the format of <c>FindMissing</c>.</summary>
+    private static string LockRelativePath(string project)
+    {
+        var slash = project.LastIndexOf('/');
+        return slash < 0 ? "packages.lock.json" : project[..(slash + 1)] + "packages.lock.json";
     }
 
     private void TryDelete(string path)

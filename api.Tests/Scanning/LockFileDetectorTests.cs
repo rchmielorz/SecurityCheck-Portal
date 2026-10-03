@@ -127,13 +127,67 @@ public sealed class LockFileDetectorTests : IDisposable
     }
 
     [Fact]
-    public void Directory_with_two_csproj_lists_both_projects_and_one_lock_entry()
+    public void Directory_with_two_csproj_is_reported_as_multiple_projects_and_not_as_project_without_lock()
     {
         Touch("src/One.csproj");
         Touch("src/Two.csproj");
 
         Assert.Equal(["src/packages.lock.json"], _detector.FindMissing(_root));
-        Assert.Equal(["src/One.csproj", "src/Two.csproj"], _detector.FindDotnetProjectsWithoutLock(_root));
+        Assert.Empty(_detector.FindDotnetProjectsWithoutLock(_root));
+        Assert.Equal(["src/packages.lock.json"], _detector.FindDirectoriesWithMultipleProjects(_root));
+    }
+
+    [Theory]
+    [InlineData("packages.config")]
+    [InlineData("packages.lock.json")]
+    public void Directory_with_two_csproj_and_lock_or_packages_config_is_not_reported_as_multiple_projects(string file)
+    {
+        Touch("src/One.csproj");
+        Touch("src/Two.csproj");
+        Touch("src/" + file);
+
+        Assert.Empty(_detector.FindDirectoriesWithMultipleProjects(_root));
+    }
+
+    [Fact]
+    public void Directory_with_one_csproj_is_not_reported_as_multiple_projects()
+    {
+        Touch("src/One.csproj");
+
+        Assert.Empty(_detector.FindDirectoriesWithMultipleProjects(_root));
+    }
+
+    [Fact]
+    public void Multiple_projects_are_listed_across_nested_directories_in_ordinal_order()
+    {
+        Touch("b/B1.csproj");
+        Touch("b/B2.csproj");
+        Touch("A1.csproj");
+        Touch("A2.csproj");
+        Touch("a/nested/N1.csproj");
+        Touch("a/nested/N2.csproj");
+        Touch("c/C.csproj");
+        Touch("d/D1.csproj");
+        Touch("d/D2.csproj");
+        Touch("d/packages.lock.json");
+
+        Assert.Equal(
+            ["a/nested/packages.lock.json", "b/packages.lock.json", "packages.lock.json"],
+            _detector.FindDirectoriesWithMultipleProjects(_root));
+    }
+
+    [Theory]
+    [InlineData("node_modules/lib")]
+    [InlineData(".git/hooks")]
+    [InlineData("bin/Debug")]
+    [InlineData("obj")]
+    [InlineData("src/node_modules/lib")]
+    public void Skipped_directories_are_not_searched_for_multiple_projects(string directory)
+    {
+        Touch(directory + "/One.csproj");
+        Touch(directory + "/Two.csproj");
+
+        Assert.Empty(_detector.FindDirectoriesWithMultipleProjects(_root));
     }
 
     [Theory]
