@@ -9,13 +9,13 @@ public abstract record ScanOutcome
     {
     }
 
-    /// <summary>Lock files for every manifest were present and Trivy found at least one target.</summary>
+    /// <summary>Lock files for every manifest were present or generated and Trivy found at least one target.</summary>
     public sealed record Completed(
         IReadOnlyList<ScanFinding> Findings, string TrivyVersion, DateTimeOffset DbUpdatedAt) : ScanOutcome;
 
     /// <summary>
     /// Findings are shown, but the absence of others cannot be confirmed: lock files are missing
-    /// or Trivy found no dependency file at all (then <c>MissingLockFiles</c> may be empty).
+    /// (not present and not generated) or Trivy found no dependency file at all (then <c>MissingLockFiles</c> may be empty).
     /// </summary>
     public sealed record Incomplete(
         IReadOnlyList<ScanFinding> Findings,

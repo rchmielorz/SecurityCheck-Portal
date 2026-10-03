@@ -163,7 +163,7 @@ public sealed class ScanJobRunner(
                 throw new InvalidOperationException("Unknown checkout result.");
         }
 
-        // 4. Trivy (it also looks for missing lock files and decides between completed and incomplete).
+        // 4. Trivy (it also generates missing .NET lock files, looks for the ones still missing and decides between completed and incomplete).
         return (await scanner.ScanAsync(directory, cancellationToken), tag);
     }
 

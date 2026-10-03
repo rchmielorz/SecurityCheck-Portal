@@ -17,7 +17,8 @@ public interface ITrivyScanner
 
 /// <summary>
 /// Runs Trivy (<c>trivy fs --scanners vuln</c>) on a checkout. Steps: read version and DB age, try to refresh
-/// the DB (a stale cache is accepted only within <see cref="ScanOptions.MaxDbAgeDays"/>), scan, parse.
+/// the DB (a stale cache is accepted only within <see cref="ScanOptions.MaxDbAgeDays"/>), generate missing .NET
+/// lock files (<see cref="DotnetLockFileGenerator"/>), scan, parse.
 /// Trivy gets an environment built from a whitelist, never a copy of ours: that one may hold the Git PAT, and
 /// Trivy was a supply-chain target (v0.69.4).
 ///
@@ -36,6 +37,7 @@ public sealed class TrivyScanner(
     IOptions<ScanOptions> options,
     IProcessRunner runner,
     LockFileDetector lockFileDetector,
+    DotnetLockFileGenerator lockFileGenerator,
     TimeProvider timeProvider,
     ILogger<TrivyScanner> logger) : ITrivyScanner
 {
@@ -114,6 +116,10 @@ public sealed class TrivyScanner(
                 $"Trivy vulnerability database is {(int)age.TotalDays} days old (limit {settings.MaxDbAgeDays}).");
         }
 
+        // 2b. Generate the missing packages.lock.json of .NET projects (after the DB gate: no restore for a scan
+        // that cannot happen anyway). Best effort; projects that still lack a lock are reported in step 4.
+        await lockFileGenerator.GenerateAsync(checkoutDirectory, cancellationToken);
+
         // 3. Scan. The report is written next to the checkouts, never inside the scanned directory.
         var reportPath = Path.Combine(settings.WorkRoot, "trivy-report-" + Guid.NewGuid().ToString("N") + ".json");
         try
@@ -145,7 +151,8 @@ public sealed class TrivyScanner(
                 return new ScanOutcome.Failed(ScanFailureReason.ScannerFailed, "Trivy report is not valid.");
             }
 
-            // 4. Never "clean" without proof: missing lock files or no target at all means incomplete.
+            // 4. Never "clean" without proof: lock files still missing after generation (npm, or a NuGet restore
+            // that failed) or no target at all means incomplete.
             var missing = lockFileDetector.FindMissing(checkoutDirectory);
             if (missing.Count > 0 || report.TargetCount == 0)
             {

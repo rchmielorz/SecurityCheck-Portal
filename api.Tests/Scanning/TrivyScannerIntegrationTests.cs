@@ -73,10 +73,13 @@ public sealed class TrivyScannerIntegrationTests : IDisposable
         };
         Directory.CreateDirectory(_root);
 
+        var runner = new ProcessRunner(NullLogger<ProcessRunner>.Instance);
         return new TrivyScanner(
             Options.Create(options),
-            new ProcessRunner(NullLogger<ProcessRunner>.Instance),
+            runner,
             new LockFileDetector(),
+            new DotnetLockFileGenerator(
+                Options.Create(options), runner, new LockFileDetector(), NullLogger<DotnetLockFileGenerator>.Instance),
             TimeProvider.System,
             NullLogger<TrivyScanner>.Instance);
     }

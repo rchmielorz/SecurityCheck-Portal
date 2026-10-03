@@ -21,6 +21,7 @@ public sealed class TrivyScannerTests : IDisposable
     private readonly string _root = Path.Combine(Path.GetTempPath(), "trivyscan-" + Guid.NewGuid().ToString("N"));
     private readonly string _checkout;
     private readonly FakeTrivy _trivy = new();
+    private readonly FakeDotnet _dotnet = new();
     private readonly ScanOptions _options;
 
     public TrivyScannerTests()
@@ -39,7 +40,10 @@ public sealed class TrivyScannerTests : IDisposable
     public void Dispose() => Directory.Delete(_root, recursive: true);
 
     private TrivyScanner Scanner => new(
-        Options.Create(_options), _trivy, new LockFileDetector(), new FixedTime(Now), NullLogger<TrivyScanner>.Instance);
+        Options.Create(_options), _trivy, new LockFileDetector(),
+        new DotnetLockFileGenerator(
+            Options.Create(_options), _dotnet, new LockFileDetector(), NullLogger<DotnetLockFileGenerator>.Instance),
+        new FixedTime(Now), NullLogger<TrivyScanner>.Instance);
 
     private void WithLockFile() => File.WriteAllText(Path.Combine(_checkout, "packages.lock.json"), "{}");
 
@@ -99,6 +103,48 @@ public sealed class TrivyScannerTests : IDisposable
         var incomplete = Assert.IsType<ScanOutcome.Incomplete>(outcome);
         Assert.Equal(["packages.lock.json"], incomplete.MissingLockFiles);
         Assert.Single(incomplete.Findings);
+    }
+
+    [Fact]
+    public async Task Dotnet_project_without_lock_is_completed_when_the_restore_generates_it()
+    {
+        _trivy.Version = VersionJson("0.58.0", Now.AddDays(-1));
+        _trivy.Report = EmptyReport;
+        File.WriteAllText(Path.Combine(_checkout, "App.csproj"), "");
+        _dotnet.WritesLockFile = true;
+
+        var outcome = await Scanner.ScanAsync(_checkout, CancellationToken.None);
+
+        Assert.IsType<ScanOutcome.Completed>(outcome);
+        Assert.Single(_dotnet.Calls);
+        Assert.Contains("--use-lock-file", _dotnet.Calls[0].ArgumentList);
+    }
+
+    [Fact]
+    public async Task Dotnet_project_whose_restore_fails_is_incomplete_with_the_lock_missing()
+    {
+        _trivy.Version = VersionJson("0.58.0", Now.AddDays(-1));
+        _trivy.Report = EmptyReport;
+        File.WriteAllText(Path.Combine(_checkout, "App.csproj"), "");
+        _dotnet.Result = new ProcessRunResult(ProcessOutcome.Exited, 1, "", "error NU1101");
+
+        var outcome = await Scanner.ScanAsync(_checkout, CancellationToken.None);
+
+        var incomplete = Assert.IsType<ScanOutcome.Incomplete>(outcome);
+        Assert.Equal(["packages.lock.json"], incomplete.MissingLockFiles);
+    }
+
+    [Fact]
+    public async Task Lock_files_are_not_generated_when_the_database_is_too_old()
+    {
+        _trivy.Version = VersionJson("0.58.0", Now.AddDays(-8));
+        File.WriteAllText(Path.Combine(_checkout, "App.csproj"), "");
+        _dotnet.WritesLockFile = true;
+
+        var outcome = await Scanner.ScanAsync(_checkout, CancellationToken.None);
+
+        Assert.Equal(ScanFailureReason.DatabaseTooOld, Assert.IsType<ScanOutcome.Failed>(outcome).Reason);
+        Assert.Empty(_dotnet.Calls);
     }
 
     [Fact]
@@ -322,6 +368,29 @@ public sealed class TrivyScannerTests : IDisposable
     private sealed class FixedTime(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    /// <summary>Records <c>dotnet restore</c> calls; optionally writes <c>packages.lock.json</c> next to the project.</summary>
+    private sealed class FakeDotnet : IProcessRunner
+    {
+        public bool WritesLockFile { get; set; }
+
+        public ProcessRunResult Result { get; set; } = new(ProcessOutcome.Exited, 0, "", "");
+
+        public List<ProcessStartInfo> Calls { get; } = [];
+
+        public Task<ProcessRunResult> RunAsync(
+            ProcessStartInfo startInfo, TimeSpan timeout, int maxCapturedChars, CancellationToken cancellationToken)
+        {
+            Calls.Add(startInfo);
+            if (WritesLockFile && Result.ExitCode == 0)
+            {
+                var project = startInfo.ArgumentList[1];
+                File.WriteAllText(Path.Combine(Path.GetDirectoryName(project)!, "packages.lock.json"), "{}");
+            }
+
+            return Task.FromResult(Result);
+        }
     }
 
     /// <summary>Answers by Trivy subcommand; the <c>fs</c> answer writes the report file the scanner asked for.</summary>

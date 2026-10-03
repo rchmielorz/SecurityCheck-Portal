@@ -224,26 +224,26 @@ Brak migracji bazy. Wymaga zmiany na serwerze: SDK .NET, dostęp do feedów NuGe
 
 #### Automated
 
-- [x] 2.1 Testy generatora przechodzą (fałszywy `IProcessRunner`): `dotnet test --filter DotnetLockFileGeneratorTests`
-- [x] 2.2 Testy: argumenty restore; środowisko nie zawiera `Git__Token`; błąd jednego projektu nie blokuje następnych; timeout i `StartFailed` nie rzucają wyjątku; anulowanie propaguje
-- [x] 2.3 Opcje walidują się: `dotnet test --filter ScanOptionsTests`
+- [x] 2.1 Testy generatora przechodzą (fałszywy `IProcessRunner`): `dotnet test --filter DotnetLockFileGeneratorTests` — c80f8b7
+- [x] 2.2 Testy: argumenty restore; środowisko nie zawiera `Git__Token`; błąd jednego projektu nie blokuje następnych; timeout i `StartFailed` nie rzucają wyjątku; anulowanie propaguje — c80f8b7
+- [x] 2.3 Opcje walidują się: `dotnet test --filter ScanOptionsTests` — c80f8b7
 
 #### Manual
 
-- [x] 2.4 Na maszynie dewelopera: restore małego projektu .NET w katalogu tymczasowym tworzy `packages.lock.json`
+- [x] 2.4 Na maszynie dewelopera: restore małego projektu .NET w katalogu tymczasowym tworzy `packages.lock.json` — c80f8b7
 
 ### Phase 3: Integracja w TrivyScanner i komunikaty
 
 #### Automated
 
-- [ ] 3.1 Testy scanera przechodzą: `dotnet test --filter TrivyScannerTests` (nowe: lock wygenerowany → `Completed`; restore nieudany → `Incomplete` z projektem na liście; generator po bramce bazy)
-- [ ] 3.2 Pełny zestaw: `dotnet test`
-- [ ] 3.3 Web: `cd web && npm run typecheck && npm run build`
+- [x] 3.1 Testy scanera przechodzą: `dotnet test --filter TrivyScannerTests` (nowe: lock wygenerowany → `Completed`; restore nieudany → `Incomplete` z projektem na liście; generator po bramce bazy)
+- [x] 3.2 Pełny zestaw: `dotnet test`
+- [x] 3.3 Web: `cd web && npm run typecheck && npm run build`
 
 #### Manual
 
-- [ ] 3.4 Skan prawdziwego repozytorium .NET bez lock-a kończy się `Completed` z listą podatności
-- [ ] 3.5 Repozytorium z projektem, którego restore się nie udaje, daje `Incomplete` z tym projektem w sekcji UI
+- [x] 3.4 Skan prawdziwego repozytorium .NET bez lock-a kończy się `Completed` z listą podatności
+- [x] 3.5 Repozytorium z projektem, którego restore się nie udaje, daje `Incomplete` z tym projektem w sekcji UI
 
 ### Phase 4: Dokumentacja i wymagania serwera
 

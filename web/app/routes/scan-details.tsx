@@ -115,13 +115,13 @@ function Results({ scan }: { scan: ScanDetails }) {
                 : "Poniższa lista może być niekompletna."}{" "}
               {scan.missingLockFiles.length === 0
                 ? "Trivy nie znalazł żadnego pliku z zależnościami (NuGet/npm), więc brak podatności nie może być potwierdzony."
-                : "Brakuje plików lock (NuGet i npm), więc nie wszystkie zależności zostały sprawdzone."}
+                : "Brakuje plików lock (npm) lub nie udało się ich wygenerować (NuGet restore zakończył się błędem), więc nie wszystkie zależności zostały sprawdzone."}
             </span>
           </span>
         </Alert>
         {scan.missingLockFiles.length > 0 && (
           <div className="space-y-2">
-            <SectionHeading>Brakujące pliki lock</SectionHeading>
+            <SectionHeading>Brakujące lub niewygenerowane pliki lock</SectionHeading>
             <ul className="list-inside list-disc break-all font-mono text-sm">
               {scan.missingLockFiles.map((file) => (
                 <li key={file}>{file}</li>
