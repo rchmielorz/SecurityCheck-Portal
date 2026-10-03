@@ -23,6 +23,14 @@ public sealed class ScanOptions
     [Range(1, 120)]
     public int ScanTimeoutMinutes { get; set; } = 15;
 
+    /// <summary><c>dotnet</c> from PATH by default; used to generate <c>packages.lock.json</c> before the scan.</summary>
+    [Required]
+    public string DotnetExecutablePath { get; set; } = "dotnet";
+
+    /// <summary>Limit of one <c>dotnet restore</c> (one project), not of all projects of a checkout.</summary>
+    [Range(1, 120)]
+    public int RestoreTimeoutMinutes { get; set; } = 10;
+
     /// <summary>Overall limit of <c>git clone</c> (not the short <c>Git:TimeoutSeconds</c>).</summary>
     [Range(1, 120)]
     public int CloneTimeoutMinutes { get; set; } = 10;

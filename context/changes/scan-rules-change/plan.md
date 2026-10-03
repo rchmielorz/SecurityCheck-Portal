@@ -217,20 +217,20 @@ Brak migracji bazy. Wymaga zmiany na serwerze: SDK .NET, dostęp do feedów NuGe
 
 #### Automated
 
-- [x] 1.1 Testy detektora przechodzą: `dotnet test --filter LockFileDetectorTests`
-- [x] 1.2 Nowe testy: `.csproj` + `packages.config` → brak wpisu; `.csproj` bez lock-a → wpis w obu metodach; wiele projektów w zagnieżdżonych katalogach; katalogi pomijane
+- [x] 1.1 Testy detektora przechodzą: `dotnet test --filter LockFileDetectorTests` — e38f785
+- [x] 1.2 Nowe testy: `.csproj` + `packages.config` → brak wpisu; `.csproj` bez lock-a → wpis w obu metodach; wiele projektów w zagnieżdżonych katalogach; katalogi pomijane — e38f785
 
 ### Phase 2: Generator lock-ów
 
 #### Automated
 
-- [ ] 2.1 Testy generatora przechodzą (fałszywy `IProcessRunner`): `dotnet test --filter DotnetLockFileGeneratorTests`
-- [ ] 2.2 Testy: argumenty restore; środowisko nie zawiera `Git__Token`; błąd jednego projektu nie blokuje następnych; timeout i `StartFailed` nie rzucają wyjątku; anulowanie propaguje
-- [ ] 2.3 Opcje walidują się: `dotnet test --filter ScanOptionsTests`
+- [x] 2.1 Testy generatora przechodzą (fałszywy `IProcessRunner`): `dotnet test --filter DotnetLockFileGeneratorTests`
+- [x] 2.2 Testy: argumenty restore; środowisko nie zawiera `Git__Token`; błąd jednego projektu nie blokuje następnych; timeout i `StartFailed` nie rzucają wyjątku; anulowanie propaguje
+- [x] 2.3 Opcje walidują się: `dotnet test --filter ScanOptionsTests`
 
 #### Manual
 
-- [ ] 2.4 Na maszynie dewelopera: restore małego projektu .NET w katalogu tymczasowym tworzy `packages.lock.json`
+- [x] 2.4 Na maszynie dewelopera: restore małego projektu .NET w katalogu tymczasowym tworzy `packages.lock.json`
 
 ### Phase 3: Integracja w TrivyScanner i komunikaty
 

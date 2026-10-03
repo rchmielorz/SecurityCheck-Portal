@@ -22,6 +22,7 @@ public static class ScanServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<IProcessRunner, ProcessRunner>();
         services.AddSingleton<LockFileDetector>();
+        services.AddSingleton<DotnetLockFileGenerator>();
         services.AddSingleton<ITrivyScanner, TrivyScanner>();
         // The pipeline needs AddPortalData and AddGitResolution too (the worker registers all three).
         services.AddSingleton<ScanQueue>();

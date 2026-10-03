@@ -32,6 +32,8 @@ public sealed class ScanOptionsTests
 
         var options = host.Services.GetRequiredService<IOptions<ScanOptions>>().Value;
         Assert.Equal("trivy", options.TrivyExecutablePath);
+        Assert.Equal("dotnet", options.DotnetExecutablePath);
+        Assert.Equal(10, options.RestoreTimeoutMinutes);
         Assert.Equal(15, options.ScanTimeoutMinutes);
         Assert.Equal(10, options.CloneTimeoutMinutes);
         Assert.Equal(5, options.DbUpdateTimeoutMinutes);
@@ -69,6 +71,8 @@ public sealed class ScanOptionsTests
     [Theory]
     [InlineData("Scan:ScanTimeoutMinutes", "0")]
     [InlineData("Scan:ScanTimeoutMinutes", "121")]
+    [InlineData("Scan:RestoreTimeoutMinutes", "0")]
+    [InlineData("Scan:RestoreTimeoutMinutes", "121")]
     [InlineData("Scan:MaxDbAgeDays", "0")]
     [InlineData("Scan:MaxDbAgeDays", "91")]
     [InlineData("Scan:CloneTimeoutMinutes", "0")]
