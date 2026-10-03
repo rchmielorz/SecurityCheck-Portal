@@ -153,6 +153,31 @@ public sealed class ScanJobRunnerTests : IClassFixture<DatabasePortalFactory>, I
         Assert.Equal(longPath[..UnscannedItem.PathMaxLength], Assert.Single(items, i => i.Key.Length == UnscannedItem.PathMaxLength).Key);
     }
 
+    [SkippableFact]
+    public async Task Unscanned_item_detail_is_stored_without_control_characters_and_without_a_cut_surrogate_pair()
+    {
+        _factory.SkipIfDatabaseUnavailable();
+        var seed = await SeedAsync();
+        _scanner.Outcome = new ScanOutcome.Incomplete(
+            [],
+            [
+                new UnscannedItem("a/packages.lock.json", UnscannedReason.RestoreFailed, "bad\0byte\u0007 here"),
+                // The cut at 300 characters falls between the two halves of the emoji.
+                new UnscannedItem("b/packages.lock.json", UnscannedReason.RestoreFailed, new string('x', UnscannedItem.DetailMaxLength - 1) + "\U0001F600tail"),
+            ],
+            "0.58.0", DbDate);
+
+        await Runner.RunAsync(seed.ScanId, CancellationToken.None);
+
+        var scan = await LoadAsync(seed.ScanId);
+        Assert.Equal(ScanStatus.Incomplete, scan.Status);
+        var items = scan.UnscannedItems.ToDictionary(i => i.Path);
+        Assert.Equal("badbyte here", items["a/packages.lock.json"].Detail);
+        var clipped = items["b/packages.lock.json"].Detail!;
+        Assert.Equal(UnscannedItem.DetailMaxLength - 1, clipped.Length);
+        Assert.All(clipped, c => Assert.False(char.IsSurrogate(c)));
+    }
+
     [SkippableTheory]
     [InlineData(ScanFailureReason.ScannerUnavailable)]
     [InlineData(ScanFailureReason.DatabaseTooOld)]

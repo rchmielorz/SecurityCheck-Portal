@@ -16,6 +16,6 @@ public sealed class ScanUnscannedItem
 
     public UnscannedReason Reason { get; set; }
 
-    /// <summary>Short, human-readable detail; never contains secrets.</summary>
+    /// <summary>Short, human-readable detail; secrets are masked on a best-effort basis.</summary>
     public string? Detail { get; set; }
 }

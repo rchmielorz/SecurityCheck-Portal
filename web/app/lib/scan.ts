@@ -78,7 +78,7 @@ export type UnscannedItem = {
 export function unscannedReasonLabel(reason: string): string {
   switch (reason) {
     case "NoLockFile":
-      return "brak pliku lock (dla npm nie jest generowany)";
+      return "brak pliku lock (nie został wygenerowany)";
     case "RestoreFailed":
       return "restore NuGet zakończył się błędem";
     case "RestoreTimedOut":

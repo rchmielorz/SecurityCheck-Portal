@@ -100,6 +100,7 @@ public static class ScanEndpoints
             .AsNoTracking()
             .Include(s => s.Findings)
             .Include(s => s.UnscannedItems)
+            .AsSplitQuery()
             .SingleOrDefaultAsync(s => s.Id == id, cancellationToken);
 
         return scan is null ? Results.NotFound() : Results.Ok(ToDetails(scan));

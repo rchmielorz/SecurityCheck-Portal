@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using securitycheck_portal.Core.Processes;
@@ -94,12 +95,11 @@ public sealed class DotnetLockFileGenerator(
                     failure = new UnscannedItem(lockRelative, UnscannedReason.RestoreTimedOut);
                     break;
                 case ProcessOutcome.Exited when result.ExitCode != 0:
-                    var firstLine = TextHelpers.FirstLine(
-                        string.IsNullOrWhiteSpace(result.Stderr) ? result.Stdout : result.Stderr);
+                    var described = DescribeFailure(result.Stdout, result.Stderr, checkoutDirectory);
                     logger.LogWarning("dotnet restore of {Project} exited with code {ExitCode}: {Output}",
-                        project, result.ExitCode, firstLine);
+                        project, result.ExitCode, described);
                     failure = new UnscannedItem(
-                        lockRelative, UnscannedReason.RestoreFailed, firstLine.Length == 0 ? null : firstLine);
+                        lockRelative, UnscannedReason.RestoreFailed, string.IsNullOrEmpty(described) ? null : described);
                     break;
             }
 
@@ -116,6 +116,54 @@ public sealed class DotnetLockFileGenerator(
         }
 
         return unscanned.Values.OrderBy(item => item.Path, StringComparer.Ordinal).ToList();
+    }
+
+    private static readonly Regex ErrorLine = new(@"(?<!\S)error\s", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static readonly Regex UrlUserInfo = new(@"(?<=://)[^/\s@]+@", RegexOptions.CultureInvariant);
+    private static readonly Regex SecretAssignment = new(
+        @"\b(token|sig|key|password|pwd|secret|access_token)=[^&\s;]+", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// The line of a failed <c>dotnet restore</c> that says why: the first line with <c>error</c> (MSBuild/NuGet format,
+    /// <c>... : error NU1101: ...</c>; <c>dotnet restore</c> writes it to stdout, which starts with a progress banner),
+    /// else the last non-empty line, with the checkout directory removed and URL userinfo and token-like values masked
+    /// (best effort), cut to <see cref="UnscannedItem.DetailMaxLength"/>. Empty when there is nothing to show.
+    /// </summary>
+    public static string DescribeFailure(string stdout, string stderr, string checkoutDirectory)
+    {
+        var lines = (stderr ?? "").Split(['\r', '\n'])
+            .Concat((stdout ?? "").Split(['\r', '\n']))
+            .Select(line => line.Trim())
+            .Where(line => line.Length > 0)
+            .ToList();
+        var chosen = lines.FirstOrDefault(line => ErrorLine.IsMatch(line)) ?? lines.LastOrDefault() ?? "";
+
+        if (!string.IsNullOrEmpty(checkoutDirectory))
+        {
+            var trimmed = checkoutDirectory.TrimEnd('\\', '/');
+            foreach (var variant in new[] { trimmed.Replace('/', '\\'), trimmed.Replace('\\', '/') }.Distinct())
+            {
+                chosen = chosen
+                    .Replace(variant + "\\", "", StringComparison.OrdinalIgnoreCase)
+                    .Replace(variant + "/", "", StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        chosen = UrlUserInfo.Replace(chosen, "***@");
+        chosen = SecretAssignment.Replace(chosen, "$1=***").Trim();
+
+        if (chosen.Length > UnscannedItem.DetailMaxLength)
+        {
+            var cut = UnscannedItem.DetailMaxLength;
+            if (char.IsHighSurrogate(chosen[cut - 1]))
+            {
+                cut--;
+            }
+
+            chosen = chosen[..cut];
+        }
+
+        return chosen;
     }
 
     /// <summary>The lock file path of a project, relative to the checkout, in the format of <c>FindMissing</c>.</summary>

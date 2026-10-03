@@ -281,8 +281,17 @@ public sealed class ScanJobRunner(
         await transaction.CommitAsync(cancellationToken);
     }
 
+    /// <summary>Cuts to <paramref name="maxLength"/> without leaving half of a surrogate pair at the end.</summary>
     private static string Clip(string text, int maxLength)
-        => text.Length > maxLength ? text[..maxLength] : text;
+    {
+        if (text.Length <= maxLength)
+        {
+            return text;
+        }
+
+        var cut = maxLength > 0 && char.IsHighSurrogate(text[maxLength - 1]) ? maxLength - 1 : maxLength;
+        return text[..cut];
+    }
 
     private static string ClipVersion(string trivyVersion)
         => trivyVersion.Length > Scan.TrivyVersionMaxLength ? trivyVersion[..Scan.TrivyVersionMaxLength] : trivyVersion;
@@ -306,6 +315,12 @@ public sealed class ScanJobRunner(
             line = line[..end].TrimEnd();
         }
 
-        return line.Length > Scan.FailureDetailMaxLength ? line[..Scan.FailureDetailMaxLength] : line;
+        // PostgreSQL rejects \0 in text, and the whole result transaction would fail with it.
+        if (line.Any(char.IsControl))
+        {
+            line = new string(line.Where(c => !char.IsControl(c)).ToArray());
+        }
+
+        return Clip(line, Scan.FailureDetailMaxLength);
     }
 }

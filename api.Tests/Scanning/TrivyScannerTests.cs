@@ -172,6 +172,21 @@ public sealed class TrivyScannerTests : IDisposable
     }
 
     [Fact]
+    public async Task Generator_item_for_a_path_that_is_no_longer_missing_is_ignored()
+    {
+        _trivy.Version = VersionJson("0.58.0", Now.AddDays(-1));
+        _trivy.Report = EmptyReport;
+        File.WriteAllText(Path.Combine(_checkout, "App.csproj"), "");
+        _dotnet.Result = new ProcessRunResult(ProcessOutcome.Exited, 1, "", "error NU1101");
+        // The lock file appears after the failed restore (and before FindMissing runs), so the reported item is stale.
+        _trivy.OnScan = () => WithLockFile();
+
+        var outcome = await Scanner.ScanAsync(_checkout, CancellationToken.None);
+
+        Assert.IsType<ScanOutcome.Completed>(outcome);
+    }
+
+    [Fact]
     public async Task Lock_files_are_generated_before_trivy_scans()
     {
         _trivy.Version = VersionJson("0.58.0", Now.AddDays(-1));
@@ -464,6 +479,8 @@ public sealed class TrivyScannerTests : IDisposable
         /// <summary>Written to the <c>--output</c> file; <c>null</c> writes nothing.</summary>
         public string? Report { get; set; }
 
+        public Action? OnScan { get; set; }
+
         public List<(ProcessStartInfo StartInfo, TimeSpan Timeout, string Subcommand)> Calls { get; } = [];
 
         public Task<ProcessRunResult> RunAsync(
@@ -480,6 +497,7 @@ public sealed class TrivyScannerTests : IDisposable
                 case "image":
                     return Task.FromResult(Update);
                 case "fs":
+                    OnScan?.Invoke();
                     if (Report is not null)
                     {
                         var output = startInfo.ArgumentList[startInfo.ArgumentList.IndexOf("--output") + 1];

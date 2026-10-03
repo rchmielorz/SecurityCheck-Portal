@@ -343,6 +343,26 @@ public sealed class ScanEndpointsTests(DatabasePortalFactory factory) : IClassFi
     }
 
     [SkippableFact]
+    public async Task Unscanned_items_are_sorted_ordinally_by_path()
+    {
+        factory.SkipIfDatabaseUnavailable();
+        using var client = await LoginAsync();
+        var (repositoryId, patternId) = await AddRepositoryWithPatternAsync(client);
+        // Ordinal order puts the upper-case "Zeta" before "alpha"; a culture-sensitive order would not.
+        var scanId = await InsertScanAsync(repositoryId, patternId, ScanStatus.Incomplete, configure: scan =>
+        {
+            scan.UnscannedItems.Add(new ScanUnscannedItem { Path = "alpha/packages.lock.json", Reason = UnscannedReason.NoLockFile });
+            scan.UnscannedItems.Add(new ScanUnscannedItem { Path = "Zeta/packages.lock.json", Reason = UnscannedReason.NoLockFile });
+        });
+
+        var details = await client.GetFromJsonAsync<ScanDetails>($"/api/scans/{scanId}");
+
+        Assert.Equal(
+            ["Zeta/packages.lock.json", "alpha/packages.lock.json"],
+            details!.Unscanned.Select(u => u.Path));
+    }
+
+    [SkippableFact]
     public async Task Failed_scan_exposes_reason_and_detail()
     {
         factory.SkipIfDatabaseUnavailable();

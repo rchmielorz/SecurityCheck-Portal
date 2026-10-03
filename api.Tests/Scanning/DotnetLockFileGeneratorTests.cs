@@ -195,7 +195,7 @@ public sealed class DotnetLockFileGeneratorTests : IDisposable
     }
 
     [Fact]
-    public async Task Failed_restore_without_stderr_uses_the_first_line_of_stdout()
+    public async Task Failed_restore_without_stderr_and_without_an_error_line_uses_the_last_line_of_stdout()
     {
         Touch("App.csproj");
         _dotnet.Results.Enqueue(new ProcessRunResult(ProcessOutcome.Exited, 1, "build failed\nmore", ""));
@@ -204,8 +204,78 @@ public sealed class DotnetLockFileGeneratorTests : IDisposable
 
         var item = Assert.Single(unscanned);
         Assert.Equal("packages.lock.json", item.Path);
-        Assert.Equal("build failed", item.Detail);
+        Assert.Equal("more", item.Detail);
     }
+
+    [Fact]
+    public async Task Failed_restore_with_the_error_on_stdout_and_empty_stderr_reports_the_error_line_not_the_banner()
+    {
+        Touch("src/App/App.csproj");
+        var projectPath = Path.Combine(_root, "src", "App", "App.csproj");
+        _dotnet.Results.Enqueue(new ProcessRunResult(
+            ProcessOutcome.Exited, 1,
+            $"Determining projects to restore...\r\n{projectPath} : error NU1101: Unable to find package Does.Not.Exist.Pkg.\r\nFailed to restore {projectPath}",
+            ""));
+
+        var unscanned = await Generator.GenerateAsync(_root, CancellationToken.None);
+
+        var item = Assert.Single(unscanned);
+        Assert.Equal(
+            $"src{Path.DirectorySeparatorChar}App{Path.DirectorySeparatorChar}App.csproj : error NU1101: Unable to find package Does.Not.Exist.Pkg.",
+            item.Detail);
+    }
+
+    [Fact]
+    public async Task Failed_restore_with_a_500_character_message_has_a_detail_of_300_characters()
+    {
+        Touch("App.csproj");
+        _dotnet.Results.Enqueue(new ProcessRunResult(
+            ProcessOutcome.Exited, 1, "", "error NU1101: " + new string('x', 500)));
+
+        var unscanned = await Generator.GenerateAsync(_root, CancellationToken.None);
+
+        Assert.Equal(UnscannedItem.DetailMaxLength, Assert.Single(unscanned).Detail!.Length);
+    }
+
+    [Fact]
+    public void DescribeFailure_prefers_an_error_line_from_stderr_over_stdout()
+    {
+        var detail = DotnetLockFileGenerator.DescribeFailure(
+            "banner\nx : error MSB1000: from stdout", "noise\nx : error NU1101: from stderr", @"C:\scw\1");
+
+        Assert.Equal("x : error NU1101: from stderr", detail);
+    }
+
+    [Fact]
+    public void DescribeFailure_without_an_error_line_takes_the_last_non_empty_line()
+    {
+        var detail = DotnetLockFileGenerator.DescribeFailure("banner\r\nsomething failed\r\n\r\n", "", @"C:\scw\1");
+
+        Assert.Equal("something failed", detail);
+        Assert.Equal("", DotnetLockFileGenerator.DescribeFailure("", "  ", @"C:\scw\1"));
+    }
+
+    [Fact]
+    public void DescribeFailure_removes_the_checkout_directory_with_both_separators()
+    {
+        Assert.Equal(
+            @"src\App\App.csproj : error NU1101: x",
+            DotnetLockFileGenerator.DescribeFailure(@"C:\scw\123\src\App\App.csproj : error NU1101: x", "", @"C:\scw\123"));
+        Assert.Equal(
+            "src/App/App.csproj : error NU1101: x",
+            DotnetLockFileGenerator.DescribeFailure("c:/scw/123/src/App/App.csproj : error NU1101: x", "", @"C:\scw\123"));
+        Assert.Equal(
+            "src/App/App.csproj : error NU1101: x",
+            DotnetLockFileGenerator.DescribeFailure("/work/123/src/App/App.csproj : error NU1101: x", "", "/work/123/"));
+    }
+
+    [Theory]
+    [InlineData("error NU1301: https://user:pass@feed/x failed", "error NU1301: https://***@feed/x failed")]
+    [InlineData("error NU1301: https://tok3n@feed/x failed", "error NU1301: https://***@feed/x failed")]
+    [InlineData("error NU1301: https://feed/x?token=abc123&a=1", "error NU1301: https://feed/x?token=***&a=1")]
+    [InlineData("error NU1301: feed?sig=abc;Password=hunter2", "error NU1301: feed?sig=***;Password=***")]
+    public void DescribeFailure_masks_url_userinfo_and_secret_values(string line, string expected)
+        => Assert.Equal(expected, DotnetLockFileGenerator.DescribeFailure(line, "", @"C:\scw\1"));
 
     [Fact]
     public async Task Timed_out_restore_is_reported()
