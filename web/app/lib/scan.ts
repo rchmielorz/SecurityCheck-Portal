@@ -63,9 +63,38 @@ export type ScanDetails = {
   scannedCommit: string | null;
   trivyVersion: string | null;
   trivyDbUpdatedAt: string | null;
-  missingLockFiles: string[];
+  unscanned: UnscannedItem[];
   findings: ScanFinding[];
 };
+
+/** UnscannedItemResponse (api/Scans/ScanContracts.cs); `reason` is the name of the C# enum value. */
+export type UnscannedItem = {
+  path: string;
+  reason: string;
+  detail: string | null;
+};
+
+/** Polish label of an unscanned reason code; an unknown code is returned as is. */
+export function unscannedReasonLabel(reason: string): string {
+  switch (reason) {
+    case "NoLockFile":
+      return "brak pliku lock (dla npm nie jest generowany)";
+    case "RestoreFailed":
+      return "restore NuGet zakończył się błędem";
+    case "RestoreTimedOut":
+      return "restore NuGet przekroczył limit czasu";
+    case "DotnetNotStarted":
+      return "nie udało się uruchomić dotnet";
+    case "RestoreBudgetExceeded":
+      return "wyczerpany łączny limit czasu restore";
+    case "MultipleProjects":
+      return "kilka projektów .csproj w jednym katalogu (wspólny plik lock)";
+    case "Unknown":
+      return "powód nieznany (skan sprzed zapisu powodów)";
+    default:
+      return reason;
+  }
+}
 
 /** Body of a 409 on requesting a scan (ScanConflict in api/Scans/ScanContracts.cs). */
 export type ScanConflict = {

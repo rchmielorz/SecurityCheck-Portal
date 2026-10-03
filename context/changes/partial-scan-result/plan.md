@@ -298,24 +298,24 @@ Migracja przenosi dane i usuwa kolumnę `MissingLockFiles` (z `Down`). API zmien
 
 #### Automated
 
-- [x] 3.1 Budowanie: `dotnet build api -c Release` i `dotnet build worker -c Release`
-- [x] 3.2 Testy zapisu i API przechodzą: `dotnet test api.Tests -c Release --filter "ScanJobRunnerTests|ScanEndpointsTests|SchemaTests"`
-- [x] 3.3 Nowe testy: zapis pozycji z `Detail` oczyszczonym z tokenu i obciętym; kaskadowe usuwanie pozycji ze skanem (`SchemaTests`); odpowiedź API z `Unscanned`
-- [x] 3.4 Pełny zestaw: `dotnet test api.Tests -c Release`
+- [x] 3.1 Budowanie: `dotnet build api -c Release` i `dotnet build worker -c Release` — fac83a2
+- [x] 3.2 Testy zapisu i API przechodzą: `dotnet test api.Tests -c Release --filter "ScanJobRunnerTests|ScanEndpointsTests|SchemaTests"` — fac83a2
+- [x] 3.3 Nowe testy: zapis pozycji z `Detail` oczyszczonym z tokenu i obciętym; kaskadowe usuwanie pozycji ze skanem (`SchemaTests`); odpowiedź API z `Unscanned` — fac83a2
+- [x] 3.4 Pełny zestaw: `dotnet test api.Tests -c Release` — fac83a2
 
 #### Manual
 
-- [x] 3.5 Migracja na lokalnej bazie z istniejącym skanem `Incomplete` przechodzi (`dotnet ef database update --project core --startup-project api`), a stare ścieżki są w nowej tabeli z powodem `Unknown`; `database update <poprzednia migracja>` też przechodzi
+- [x] 3.5 Migracja na lokalnej bazie z istniejącym skanem `Incomplete` przechodzi (`dotnet ef database update --project core --startup-project api`), a stare ścieżki są w nowej tabeli z powodem `Unknown`; `database update <poprzednia migracja>` też przechodzi — fac83a2
 
 ### Phase 4: UI i dokumentacja
 
 #### Automated
 
-- [ ] 4.1 Typy i build: `cd web && npm run typecheck && npm run build`
-- [ ] 4.2 Całość: `dotnet build api -c Release && dotnet test api.Tests -c Release`
+- [x] 4.1 Typy i build: `cd web && npm run typecheck && npm run build`
+- [x] 4.2 Całość: `dotnet build api -c Release && dotnet test api.Tests -c Release`
 
 #### Manual
 
-- [ ] 4.3 Skan repozytorium z nieudanym restore (np. błędny feed) pokazuje przy projekcie powód „restore NuGet zakończył się błędem" i pierwszą linię komunikatu
-- [ ] 4.4 Skan z npm bez locka pokazuje „brak pliku lock", a z kilkoma `.csproj` w jednym katalogu „kilka projektów .csproj w jednym katalogu"
-- [ ] 4.5 Skan sprzed migracji pokazuje swoje ścieżki z powodem „nieznany"
+- [x] 4.3 Skan repozytorium z nieudanym restore (np. błędny feed) pokazuje przy projekcie powód „restore NuGet zakończył się błędem" i pierwszą linię komunikatu
+- [x] 4.4 Skan z npm bez locka pokazuje „brak pliku lock", a z kilkoma `.csproj` w jednym katalogu „kilka projektów .csproj w jednym katalogu"
+- [x] 4.5 Skan sprzed migracji pokazuje swoje ścieżki z powodem „nieznany"

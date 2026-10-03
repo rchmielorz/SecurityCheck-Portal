@@ -16,6 +16,7 @@ import {
   isScanInProgress,
   QUEUED_WARNING_MS,
   scanStatusBadge,
+  unscannedReasonLabel,
   type ScanDetails,
 } from "../lib/scan";
 
@@ -113,18 +114,24 @@ function Results({ scan }: { scan: ScanDetails }) {
               {findings.length === 0
                 ? "Nie znaleziono podatności w sprawdzonych plikach, ale nie można potwierdzić ich braku w całym repozytorium."
                 : "Poniższa lista może być niekompletna."}{" "}
-              {scan.missingLockFiles.length === 0
+              {scan.unscanned.length === 0
                 ? "Trivy nie znalazł żadnego pliku z zależnościami (NuGet/npm), więc brak podatności nie może być potwierdzony."
-                : "Brakuje plików lock (npm) lub nie udało się ich wygenerować (NuGet restore zakończył się błędem), więc nie wszystkie zależności zostały sprawdzone."}
+                : "Nie wszystkie zależności zostały sprawdzone (powody poniżej)."}
             </span>
           </span>
         </Alert>
-        {scan.missingLockFiles.length > 0 && (
+        {scan.unscanned.length > 0 && (
           <div className="space-y-2">
-            <SectionHeading>Brakujące lub niewygenerowane pliki lock</SectionHeading>
-            <ul className="list-inside list-disc break-all font-mono text-sm">
-              {scan.missingLockFiles.map((file) => (
-                <li key={file}>{file}</li>
+            <SectionHeading>Nieprzeskanowane</SectionHeading>
+            <ul className="space-y-2 text-sm">
+              {scan.unscanned.map((item) => (
+                <li key={item.path}>
+                  <span className="break-all font-mono">{item.path}</span>
+                  <span> — {unscannedReasonLabel(item.reason)}</span>
+                  {item.detail && (
+                    <span className="mt-0.5 block break-all font-mono text-xs text-text-muted">{item.detail}</span>
+                  )}
+                </li>
               ))}
             </ul>
           </div>
