@@ -127,7 +127,7 @@ Fundamenty poniżej zakładają ten stan i nie tworzą ponownie tego, co istniej
 - **Parallel with:** F-02
 - **Blockers:** —
 - **Unknowns:**
-  - Czy skanowane repozytoria mają pliki blokady zależności? Bez nich zewnętrzny skaner (Trivy) może pominąć część bibliotek — ryzyko fałszywego „brak wyników”. — Owner: user. Block: no.
+  - Czy skanowane repozytoria mają pliki blokady zależności? Bez nich zewnętrzny skaner (Trivy) może pominąć część bibliotek — ryzyko fałszywego „brak wyników”. — Owner: user. Block: no. — rozstrzygnięte 2026-10-03: repozytoria zasadniczo nie mają plików blokady, więc worker generuje brakujące `packages.lock.json` dla .NET przed skanem (`dotnet restore --use-lock-file`); projekt, którego restore się nie powiódł, i npm bez pliku blokady dają wynik niepełny (zmiana `scan-rules-change`).
   - Skąd serwer pobiera bazę podatności skanera (bezpośrednio przez proxy czy lokalny mirror)? — Owner: team. Block: no.
 - **Risk:** Gwiazda przewodnia; skan trwa minuty, więc musi działać poza cyklem życia żądania HTTP i odróżniać „nieudany” od „czysty” — największe ryzyko wiarygodności, dlatego nic poza S-01 go nie poprzedza.
 - **Status:** done

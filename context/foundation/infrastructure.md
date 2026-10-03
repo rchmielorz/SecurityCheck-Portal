@@ -99,7 +99,7 @@ It costs nothing extra on the existing server, and it matches how the team alrea
 
 #### 2. Docker Compose on internal Linux VM
 
-It has the most deterministic deploy and rollback of the three, keeps React Router SSR as scaffolded (the web Dockerfile already exists), and gives the same setup in development and production. The gap vs. IIS is a new Linux server the team must patch and back up. The scanner image needs git plus a Trivy binary pinned by version and verified with cosign (or the official image pinned by digest). It does not need the .NET SDK or Node, because Trivy reads lock files directly. Docker group access is root-equivalent.
+It has the most deterministic deploy and rollback of the three, keeps React Router SSR as scaffolded (the web Dockerfile already exists), and gives the same setup in development and production. The gap vs. IIS is a new Linux server the team must patch and back up. The scanner image needs git plus a Trivy binary pinned by version and verified with cosign (or the official image pinned by digest). It does not need Node, because Trivy reads npm lock files directly. It does need the .NET SDK, because the worker generates missing `packages.lock.json` files with `dotnet restore --use-lock-file` before the scan, and the NuGet feeds the projects use must be configured in the NuGet.config of the worker account. Docker group access is root-equivalent.
 
 #### 3. Kamal on internal Linux VM
 
@@ -181,6 +181,7 @@ The team shipped the portal on the shared IIS server and left the scanner inside
    - Make sure the server reaches Active Directory over LDAPS (TCP 636) and trusts the internal CA that issued the domain controllers' certificate. `Auth:Ldap:Host` must be a name present in that certificate (DC FQDN or domain name), not an IP address.
    - Install PostgreSQL and create the `securitycheck` database and login.
    - Install git and a pinned Trivy Windows binary. Never use v0.69.4. Verify it with `cosign verify-blob` against the release's sigstore bundle.
+   - Install the .NET SDK (the `dotnet` on the worker's PATH, or set `Scan:DotnetExecutablePath`). The worker runs `dotnet restore --use-lock-file` to generate missing `packages.lock.json` files, so the worker account's profile needs a NuGet.config with the internal NuGet feeds and their access configured there. The portal never passes feed credentials. A project whose restore fails leaves the scan **incomplete**. Node is not needed.
    - Create a cache folder (e.g. `D:\trivy-cache`) writable only by the worker account.
    - Allow `mirror.gcr.io` / `ghcr.io` through the proxy for the worker account, or set up an internal DB mirror.
 2. **Split the worker.** Add a `SecurityCheck.Worker` project (Worker Service template) with `Microsoft.Extensions.Hosting.WindowsServices` and `builder.Services.AddWindowsService()`. It shares the EF Core `DbContext` project with the API. Register it once with `New-Service -Name SecurityCheck.Worker -BinaryPathName ...\worker\SecurityCheck.Worker.exe -Credential <gMSA>`.

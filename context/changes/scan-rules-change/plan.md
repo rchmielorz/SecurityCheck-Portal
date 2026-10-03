@@ -236,21 +236,21 @@ Brak migracji bazy. Wymaga zmiany na serwerze: SDK .NET, dostęp do feedów NuGe
 
 #### Automated
 
-- [x] 3.1 Testy scanera przechodzą: `dotnet test --filter TrivyScannerTests` (nowe: lock wygenerowany → `Completed`; restore nieudany → `Incomplete` z projektem na liście; generator po bramce bazy)
-- [x] 3.2 Pełny zestaw: `dotnet test`
-- [x] 3.3 Web: `cd web && npm run typecheck && npm run build`
+- [x] 3.1 Testy scanera przechodzą: `dotnet test --filter TrivyScannerTests` (nowe: lock wygenerowany → `Completed`; restore nieudany → `Incomplete` z projektem na liście; generator po bramce bazy) — 3068922
+- [x] 3.2 Pełny zestaw: `dotnet test` — 3068922
+- [x] 3.3 Web: `cd web && npm run typecheck && npm run build` — 3068922
 
 #### Manual
 
-- [x] 3.4 Skan prawdziwego repozytorium .NET bez lock-a kończy się `Completed` z listą podatności
-- [x] 3.5 Repozytorium z projektem, którego restore się nie udaje, daje `Incomplete` z tym projektem w sekcji UI
+- [x] 3.4 Skan prawdziwego repozytorium .NET bez lock-a kończy się `Completed` z listą podatności — 3068922
+- [x] 3.5 Repozytorium z projektem, którego restore się nie udaje, daje `Incomplete` z tym projektem w sekcji UI — 3068922
 
 ### Phase 4: Dokumentacja i wymagania serwera
 
 #### Automated
 
-- [ ] 4.1 Całość buduje się i przechodzi testy: `dotnet build && dotnet test`
+- [x] 4.1 Całość buduje się i przechodzi testy: `dotnet build && dotnet test`
 
 #### Manual
 
-- [ ] 4.2 Admin serwera potwierdza, że SDK i feedy NuGet da się skonfigurować dla konta workera zgodnie z opisem
+- [x] 4.2 Admin serwera potwierdza, że SDK i feedy NuGet da się skonfigurować dla konta workera zgodnie z opisem
