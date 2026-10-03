@@ -311,11 +311,11 @@ Migracja przenosi dane i usuwa kolumnę `MissingLockFiles` (z `Down`). API zmien
 
 #### Automated
 
-- [x] 4.1 Typy i build: `cd web && npm run typecheck && npm run build`
-- [x] 4.2 Całość: `dotnet build api -c Release && dotnet test api.Tests -c Release`
+- [x] 4.1 Typy i build: `cd web && npm run typecheck && npm run build` — 98051c6
+- [x] 4.2 Całość: `dotnet build api -c Release && dotnet test api.Tests -c Release` — 98051c6
 
 #### Manual
 
-- [x] 4.3 Skan repozytorium z nieudanym restore (np. błędny feed) pokazuje przy projekcie powód „restore NuGet zakończył się błędem" i pierwszą linię komunikatu
-- [x] 4.4 Skan z npm bez locka pokazuje „brak pliku lock", a z kilkoma `.csproj` w jednym katalogu „kilka projektów .csproj w jednym katalogu"
-- [x] 4.5 Skan sprzed migracji pokazuje swoje ścieżki z powodem „nieznany"
+- [x] 4.3 Skan repozytorium z nieudanym restore (np. błędny feed) pokazuje przy projekcie powód „restore NuGet zakończył się błędem" i pierwszą linię komunikatu — 98051c6
+- [x] 4.4 Skan z npm bez locka pokazuje „brak pliku lock", a z kilkoma `.csproj` w jednym katalogu „kilka projektów .csproj w jednym katalogu" — 98051c6
+- [x] 4.5 Skan sprzed migracji pokazuje swoje ścieżki z powodem „nieznany" — 98051c6
