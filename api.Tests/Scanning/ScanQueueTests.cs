@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using securitycheck_portal.Core.Data;
+using securitycheck_portal.Core.Git;
 using securitycheck_portal.Core.Scanning;
 
 namespace securitycheck_portal.Tests.Scanning;
@@ -31,6 +32,7 @@ public sealed class ScanQueueTests(DatabasePortalFactory factory) : IClassFixtur
     private ScanQueue Queue => new(
         factory.Services.GetRequiredService<IServiceScopeFactory>(),
         Options.Create(new ScanOptions { CacheDirectory = Path.Combine(_workRoot, "cache"), WorkRoot = _workRoot }),
+        Options.Create(new GitOptions()),
         TimeProvider.System,
         NullLogger<ScanQueue>.Instance);
 
@@ -152,6 +154,50 @@ public sealed class ScanQueueTests(DatabasePortalFactory factory) : IClassFixtur
         Assert.False(Directory.Exists(_workRoot));
     }
 
+    [SkippableFact]
+    public async Task Sweep_fails_stale_running_scans_and_leaves_fresh_inflight_queued_and_finished_ones()
+    {
+        factory.SkipIfDatabaseUnavailable();
+        await ClearQueueAsync();
+        var limit = ScanQueue.AbandonedAfter(new ScanOptions(), new GitOptions());
+        var now = DateTimeOffset.UtcNow;
+        var stale = await AddScanAsync(ScanStatus.Running, Base, now - limit - TimeSpan.FromMinutes(1));
+        var inFlight = await AddScanAsync(ScanStatus.Running, Base, now - limit - TimeSpan.FromMinutes(1));
+        var fresh = await AddScanAsync(ScanStatus.Running, Base, now - TimeSpan.FromMinutes(1));
+        var queued = await AddScanAsync(ScanStatus.Queued, Base);
+        var completed = await AddScanAsync(ScanStatus.Completed, Base, now - limit - TimeSpan.FromMinutes(1));
+
+        var count = await Queue.FailAbandonedAsync(inFlight, CancellationToken.None);
+
+        Assert.Equal(1, count);
+        await using var scope = factory.CreateDbScope(out var db);
+        var swept = await db.Scans.SingleAsync(s => s.Id == stale);
+        Assert.Equal(ScanStatus.Failed, swept.Status);
+        Assert.Equal(ScanFailureReason.Interrupted, swept.FailureReason);
+        Assert.Equal(ScanQueue.AbandonedDetail, swept.FailureDetail);
+        Assert.NotNull(swept.FinishedAt);
+        Assert.Equal(ScanStatus.Running, (await db.Scans.SingleAsync(s => s.Id == inFlight)).Status);
+        Assert.Equal(ScanStatus.Running, (await db.Scans.SingleAsync(s => s.Id == fresh)).Status);
+        Assert.Equal(ScanStatus.Queued, (await db.Scans.SingleAsync(s => s.Id == queued)).Status);
+        Assert.Equal(ScanStatus.Completed, (await db.Scans.SingleAsync(s => s.Id == completed)).Status);
+
+        // Without an in-flight scan the formerly protected one is swept too.
+        Assert.Equal(1, await Queue.FailAbandonedAsync(null, CancellationToken.None));
+    }
+
+    [Fact]
+    public void Abandoned_limit_is_the_sum_of_all_timeouts_plus_a_margin()
+    {
+        var scan = new ScanOptions { CloneTimeoutMinutes = 10, ScanTimeoutMinutes = 15, DbUpdateTimeoutMinutes = 5 };
+        var git = new GitOptions { TimeoutSeconds = 30 };
+
+        var limit = ScanQueue.AbandonedAfter(scan, git);
+
+        // 30 min (clone + scan + DB) + 2 x 30 s git + 2 x 1 min trivy version + 5 min margin
+        Assert.Equal(TimeSpan.FromMinutes(30 + 1 + 2 + 5), limit);
+        Assert.True(ScanQueue.AbandonedAfter(scan, new GitOptions { TimeoutSeconds = 600 }) > limit);
+    }
+
     // Other tests of this class leave queued scans behind; a claim is global, so start from an empty queue.
     private async Task ClearQueueAsync()
     {
@@ -161,7 +207,7 @@ public sealed class ScanQueueTests(DatabasePortalFactory factory) : IClassFixtur
             .ExecuteUpdateAsync(set => set.SetProperty(s => s.Status, ScanStatus.Completed));
     }
 
-    private async Task<long> AddScanAsync(ScanStatus status, DateTimeOffset requestedAt)
+    private async Task<long> AddScanAsync(ScanStatus status, DateTimeOffset requestedAt, DateTimeOffset? startedAt = null)
     {
         await using var scope = factory.CreateDbScope(out var db);
         var scan = new Scan
@@ -173,6 +219,7 @@ public sealed class ScanQueueTests(DatabasePortalFactory factory) : IClassFixtur
             Status = status,
             RequestedBy = "alice",
             RequestedAt = requestedAt,
+            StartedAt = startedAt,
         };
         db.Scans.Add(scan);
         await db.SaveChangesAsync();

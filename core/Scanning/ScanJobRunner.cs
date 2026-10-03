@@ -25,19 +25,32 @@ public sealed class ScanJobRunner(
 {
     private static readonly TimeSpan PersistTimeout = TimeSpan.FromSeconds(30);
 
+    private long _currentScanId;
+
+    /// <summary>The scan being processed right now, or null; the abandoned-scan sweep must not touch it.</summary>
+    public long? CurrentScanId
+    {
+        get
+        {
+            var id = Interlocked.Read(ref _currentScanId);
+            return id > 0 ? id : null;
+        }
+    }
+
     private sealed record Resolved(string Tag, string Commit);
 
     /// <param name="scanId">A scan already claimed by <see cref="ScanQueue.ClaimNextAsync"/> (status <c>Running</c>).</param>
     /// <remarks>
     /// When <paramref name="cancellationToken"/> is cancelled (the worker is stopping), the scan is marked
     /// <c>Failed(Interrupted)</c> if the database still answers, and the method returns without throwing. If the
-    /// update is impossible the row stays <c>Running</c> and <see cref="ScanQueue.RecoverInterruptedAsync"/>
-    /// fixes it on the next start.
+    /// update is impossible the row stays <c>Running</c> and <see cref="ScanQueue.FailAbandonedAsync"/> (periodic)
+    /// or <see cref="ScanQueue.RecoverInterruptedAsync"/> (next start) fixes it.
     /// </remarks>
     public async Task RunAsync(long scanId, CancellationToken cancellationToken)
     {
         var options = scanOptions.Value;
         var directory = WorkDirectory.ForScan(options, scanId);
+        Interlocked.Exchange(ref _currentScanId, scanId);
 
         try
         {
@@ -66,6 +79,7 @@ public sealed class ScanJobRunner(
         finally
         {
             WorkDirectory.Delete(directory, logger);
+            Interlocked.Exchange(ref _currentScanId, 0);
         }
     }
 
@@ -166,7 +180,7 @@ public sealed class ScanJobRunner(
         }
         catch (Exception ex)
         {
-            // The row stays Running; the next start of the worker marks it Interrupted.
+            // The row stays Running; the periodic sweep (or the next start) marks it Interrupted.
             logger.LogError(ex, "Could not store the result of scan {ScanId}", scanId);
         }
     }
@@ -180,58 +194,77 @@ public sealed class ScanJobRunner(
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<PortalDbContext>();
 
-        var scan = await db.Scans.SingleOrDefaultAsync(
-            s => s.Id == scanId && s.Status == ScanStatus.Running, cancellationToken);
-        if (scan is null)
-        {
-            logger.LogWarning("Scan {ScanId} is not running any more; its result is dropped", scanId);
-            return;
-        }
+        var finished = timeProvider.GetUtcNow();
+        var scannedTag = resolved?.Tag;
+        var scannedCommit = resolved?.Commit;
 
-        scan.FinishedAt = timeProvider.GetUtcNow();
-        if (resolved is not null)
-        {
-            scan.ScannedTag = resolved.Tag;
-            scan.ScannedCommit = resolved.Commit;
-        }
+        ScanStatus status;
+        ScanFailureReason? failureReason = null;
+        string? failureDetail = null;
+        string? trivyVersion = null;
+        DateTimeOffset? dbUpdatedAt = null;
+        string[] missingLockFiles = [];
+        IReadOnlyList<ScanFinding> findings = [];
 
         switch (outcome)
         {
             case ScanOutcome.Completed completed:
-                scan.Status = ScanStatus.Completed;
-                Apply(scan, completed.Findings, [], completed.TrivyVersion, completed.DbUpdatedAt);
+                status = ScanStatus.Completed;
+                (findings, trivyVersion, dbUpdatedAt) = (completed.Findings, ClipVersion(completed.TrivyVersion), completed.DbUpdatedAt);
                 break;
             case ScanOutcome.Incomplete incomplete:
-                scan.Status = ScanStatus.Incomplete;
-                Apply(scan, incomplete.Findings, incomplete.MissingLockFiles, incomplete.TrivyVersion, incomplete.DbUpdatedAt);
+                status = ScanStatus.Incomplete;
+                (findings, trivyVersion, dbUpdatedAt) = (incomplete.Findings, ClipVersion(incomplete.TrivyVersion), incomplete.DbUpdatedAt);
+                missingLockFiles = [.. incomplete.MissingLockFiles];
                 break;
             case ScanOutcome.Failed failed:
-                scan.Status = ScanStatus.Failed;
-                scan.FailureReason = failed.Reason;
-                scan.FailureDetail = Sanitize(failed.Detail);
-                logger.LogWarning("Scan {ScanId} failed ({Reason}): {Detail}", scanId, failed.Reason, scan.FailureDetail);
+                status = ScanStatus.Failed;
+                failureReason = failed.Reason;
+                failureDetail = Sanitize(failed.Detail);
+                logger.LogWarning("Scan {ScanId} failed ({Reason}): {Detail}", scanId, failed.Reason, failureDetail);
                 break;
             default:
                 throw new InvalidOperationException("Unknown scan outcome.");
         }
 
-        await db.SaveChangesAsync(cancellationToken);
-    }
+        // Failed(Interrupted) written by the sweep or by recovery is terminal: the status change is one conditional
+        // UPDATE (WHERE Status = 'Running'), in the same transaction as the findings, so a late result can neither
+        // overwrite it nor leave findings behind.
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
-    private static void Apply(
-        Scan scan, IReadOnlyList<ScanFinding> findings, IReadOnlyList<string> missingLockFiles,
-        string trivyVersion, DateTimeOffset dbUpdatedAt)
-    {
-        scan.TrivyVersion = trivyVersion.Length > Scan.TrivyVersionMaxLength
-            ? trivyVersion[..Scan.TrivyVersionMaxLength]
-            : trivyVersion;
-        scan.TrivyDbUpdatedAt = dbUpdatedAt;
-        scan.MissingLockFiles = [.. missingLockFiles];
+        var updated = await db.Scans
+            .Where(s => s.Id == scanId && s.Status == ScanStatus.Running)
+            .ExecuteUpdateAsync(set => set
+                .SetProperty(s => s.Status, status)
+                .SetProperty(s => s.FinishedAt, (DateTimeOffset?)finished)
+                .SetProperty(s => s.ScannedTag, scannedTag)
+                .SetProperty(s => s.ScannedCommit, scannedCommit)
+                .SetProperty(s => s.FailureReason, failureReason)
+                .SetProperty(s => s.FailureDetail, failureDetail)
+                .SetProperty(s => s.TrivyVersion, trivyVersion)
+                .SetProperty(s => s.TrivyDbUpdatedAt, dbUpdatedAt)
+                .SetProperty(s => s.MissingLockFiles, missingLockFiles),
+                cancellationToken);
+
+        if (updated == 0)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            logger.LogWarning("Scan {ScanId} is not running any more; its result is dropped", scanId);
+            return;
+        }
+
         foreach (var finding in findings)
         {
-            scan.Findings.Add(finding);
+            finding.ScanId = scanId;
+            db.ScanFindings.Add(finding);
         }
+
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
+
+    private static string ClipVersion(string trivyVersion)
+        => trivyVersion.Length > Scan.TrivyVersionMaxLength ? trivyVersion[..Scan.TrivyVersionMaxLength] : trivyVersion;
 
     /// <summary>One trimmed line, without the Git token (plain or as the Basic-auth value) and not longer than the column.</summary>
     internal string Sanitize(string? detail)

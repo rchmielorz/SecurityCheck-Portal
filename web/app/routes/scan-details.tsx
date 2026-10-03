@@ -10,6 +10,7 @@ import { VulnerabilityList } from "../components/vulnerability-list";
 import { apiFetch } from "../lib/api";
 import { formatDateTime, repositoryDisplayName } from "../lib/patterns";
 import {
+  describeAgeDays,
   describeFailureReason,
   findingsCountLabel,
   isScanInProgress,
@@ -47,11 +48,17 @@ export async function clientLoader({ params, request }: Route.ClientLoaderArgs) 
 }
 
 function Metadata({ scan }: { scan: ScanDetails }) {
+  const dbAge = scan.trivyDbUpdatedAt ? describeAgeDays(scan.trivyDbUpdatedAt) : "";
   const items: Array<[string, string | null]> = [
     ["Przeskanowany tag", scan.scannedTag],
     ["Commit", scan.scannedCommit ? scan.scannedCommit.slice(0, 7) : null],
     ["Zakończono", scan.finishedAt ? formatDateTime(scan.finishedAt) : null],
-    ["Baza Trivy z", scan.trivyDbUpdatedAt ? formatDateTime(scan.trivyDbUpdatedAt) : null],
+    [
+      "Baza Trivy z",
+      scan.trivyDbUpdatedAt
+        ? `${formatDateTime(scan.trivyDbUpdatedAt)}${dbAge ? ` (${dbAge})` : ""}`
+        : null,
+    ],
     ["Wersja Trivy", scan.trivyVersion],
   ];
   const known = items.filter((item): item is [string, string] => item[1] !== null);
@@ -106,7 +113,9 @@ function Results({ scan }: { scan: ScanDetails }) {
               {findings.length === 0
                 ? "Nie znaleziono podatności w sprawdzonych plikach, ale nie można potwierdzić ich braku w całym repozytorium."
                 : "Poniższa lista może być niekompletna."}{" "}
-              Brakuje plików lock (NuGet i npm), więc nie wszystkie zależności zostały sprawdzone.
+              {scan.missingLockFiles.length === 0
+                ? "Trivy nie znalazł żadnego pliku z zależnościami (NuGet/npm), więc brak podatności nie może być potwierdzony."
+                : "Brakuje plików lock (NuGet i npm), więc nie wszystkie zależności zostały sprawdzone."}
             </span>
           </span>
         </Alert>
@@ -130,13 +139,20 @@ function Results({ scan }: { scan: ScanDetails }) {
     );
   }
 
-  // Completed: "no results" is true only here.
-  return (
-    <div className="space-y-2">
-      <SectionHeading>Podatności ({findingsCountLabel(findings.length)})</SectionHeading>
-      <VulnerabilityList findings={findings} emptyText="Brak wyników — nie znaleziono podatności." />
-    </div>
-  );
+  // "No results" is true only for Completed.
+  if (status === "Completed") {
+    return (
+      <div className="space-y-2">
+        <SectionHeading>Podatności ({findingsCountLabel(findings.length)})</SectionHeading>
+        <VulnerabilityList
+          findings={findings}
+          emptyText="Brak wyników — nie znaleziono podatności w plikach lock NuGet i npm."
+        />
+      </div>
+    );
+  }
+
+  return <Alert variant="info">Nieznany status skanu</Alert>;
 }
 
 export default function ScanDetailsPage({ loaderData }: Route.ComponentProps) {

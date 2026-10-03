@@ -85,6 +85,22 @@ public sealed class ScanJobRunnerTests : IClassFixture<DatabasePortalFactory>, I
     }
 
     [SkippableFact]
+    public async Task Current_scan_id_is_set_while_the_scan_runs_and_cleared_afterwards()
+    {
+        _factory.SkipIfDatabaseUnavailable();
+        var seed = await SeedAsync();
+        var runner = Runner;
+        long? during = null;
+        _scanner.OnScan = () => during = runner.CurrentScanId;
+
+        Assert.Null(runner.CurrentScanId);
+        await runner.RunAsync(seed.ScanId, CancellationToken.None);
+
+        Assert.Equal(seed.ScanId, during);
+        Assert.Null(runner.CurrentScanId);
+    }
+
+    [SkippableFact]
     public async Task Incomplete_scan_stores_findings_and_missing_lock_files()
     {
         _factory.SkipIfDatabaseUnavailable();
@@ -334,6 +350,38 @@ public sealed class ScanJobRunnerTests : IClassFixture<DatabasePortalFactory>, I
         Assert.Equal(0, _scanner.Calls);
     }
 
+    [SkippableTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Result_of_a_scan_swept_to_failed_in_the_meantime_is_dropped(bool incomplete)
+    {
+        _factory.SkipIfDatabaseUnavailable();
+        var seed = await SeedAsync();
+        _scanner.Outcome = incomplete
+            ? new ScanOutcome.Incomplete([Finding("lodash", "CVE-1", FindingSeverity.High)], ["a/packages.lock.json"], "0.58.0", DbDate)
+            : new ScanOutcome.Completed([Finding("lodash", "CVE-1", FindingSeverity.High)], "0.58.0", DbDate);
+
+        // The sweep (or recovery) fails the row after the runner read it as Running and before it writes the result.
+        _scanner.OnScan = () =>
+        {
+            using var scope = _factory.CreateDbScope(out var db);
+            db.Scans.Where(s => s.Id == seed.ScanId).ExecuteUpdate(set => set
+                .SetProperty(s => s.Status, ScanStatus.Failed)
+                .SetProperty(s => s.FailureReason, (ScanFailureReason?)ScanFailureReason.Interrupted)
+                .SetProperty(s => s.FailureDetail, ScanQueue.AbandonedDetail));
+        };
+
+        await Runner.RunAsync(seed.ScanId, CancellationToken.None);
+
+        var scan = await LoadAsync(seed.ScanId);
+        Assert.Equal(ScanStatus.Failed, scan.Status);
+        Assert.Equal(ScanFailureReason.Interrupted, scan.FailureReason);
+        Assert.Equal(ScanQueue.AbandonedDetail, scan.FailureDetail);
+        Assert.Empty(scan.Findings);
+        Assert.Null(scan.TrivyVersion);
+        Assert.Empty(scan.MissingLockFiles);
+    }
+
     private async Task AssertNotResolvedAsync(Seed seed, string detailPart)
     {
         var scan = await LoadAsync(seed.ScanId);
@@ -416,6 +464,8 @@ public sealed class ScanJobRunnerTests : IClassFixture<DatabasePortalFactory>, I
     {
         public GitCheckoutResult Result { get; set; } = new GitCheckoutResult.Success();
 
+        public Action? OnScan { get; set; }
+
         public int Calls { get; private set; }
 
         public bool CreatedDirectory { get; private set; }
@@ -432,6 +482,7 @@ public sealed class ScanJobRunnerTests : IClassFixture<DatabasePortalFactory>, I
             string canonicalUrl, string tag, string expectedCommit, string targetDirectory, CancellationToken cancellationToken)
         {
             Calls++;
+            OnScan?.Invoke();
             (Url, Tag, Commit, TargetDirectory) = (canonicalUrl, tag, expectedCommit, targetDirectory);
 
             Directory.CreateDirectory(Path.Combine(targetDirectory, ".git"));
@@ -450,6 +501,8 @@ public sealed class ScanJobRunnerTests : IClassFixture<DatabasePortalFactory>, I
 
         public Exception? Throw { get; set; }
 
+        public Action? OnScan { get; set; }
+
         public int Calls { get; private set; }
 
         public string? ScannedDirectory { get; private set; }
@@ -459,6 +512,7 @@ public sealed class ScanJobRunnerTests : IClassFixture<DatabasePortalFactory>, I
         public Task<ScanOutcome> ScanAsync(string checkoutDirectory, CancellationToken cancellationToken)
         {
             Calls++;
+            OnScan?.Invoke();
             ScannedDirectory = checkoutDirectory;
             DirectoryExisted = Directory.Exists(checkoutDirectory);
 

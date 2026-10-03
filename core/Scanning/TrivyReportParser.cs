@@ -1,4 +1,6 @@
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using securitycheck_portal.Core.Data;
 
 namespace securitycheck_portal.Core.Scanning;
@@ -8,7 +10,7 @@ namespace securitycheck_portal.Core.Scanning;
 /// <param name="Findings">Merged: one row per (library, version, vulnerability) with all files in <c>Targets</c>.</param>
 public sealed record TrivyReport(int TargetCount, IReadOnlyList<ScanFinding> Findings);
 
-public static class TrivyReportParser
+public static partial class TrivyReportParser
 {
     /// <returns><c>false</c> for anything that is not a Trivy report (invalid JSON, wrong shape, a vulnerability without its key fields).</returns>
     public static bool TryParse(string json, out TrivyReport? report)
@@ -141,9 +143,97 @@ public static class TrivyReportParser
     };
 
     private static string? Text(JsonElement element, string name)
-        => element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+    {
+        if (!element.TryGetProperty(name, out var value) || value.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        try
+        {
+            return Clean(value.GetString());
+        }
+        catch (InvalidOperationException)
+        {
+            // GetString refuses an escaped lone surrogate ("\ud800"); replace those escapes and read again.
+            var raw = value.GetRawText();
+            var replaced = EscapeSequence().Replace(raw[1..^1], match =>
+                match.Length == 6 && IsSurrogateEscape(match.Value) ? "\\uFFFD" : match.Value);
+            return Clean(JsonSerializer.Deserialize<string>("\"" + replaced + "\""));
+        }
+    }
+
+    // One JSON escape: a valid surrogate pair (12 chars), a single \uXXXX, or any other backslash pair (so \\u is not misread).
+    [GeneratedRegex(@"\\u[dD][89abAB][0-9a-fA-F]{2}\\u[dD][c-fC-F][0-9a-fA-F]{2}|\\u[0-9a-fA-F]{4}|\\.")]
+    private static partial Regex EscapeSequence();
+
+    private static bool IsSurrogateEscape(string escape)
+        => escape[1] == 'u' && char.IsSurrogate((char)Convert.ToInt32(escape[2..], 16));
 
     private static string? Empty(string? value, int max) => string.IsNullOrWhiteSpace(value) ? null : Cut(value, max);
 
-    private static string Cut(string value, int max) => value.Length > max ? value[..max] : value;
+    /// <summary>
+    /// PostgreSQL rejects U+0000 and invalid UTF-16 in text columns, which would lose the whole scan result:
+    /// NUL is dropped and a lone surrogate becomes U+FFFD.
+    /// </summary>
+    internal static string? Clean(string? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        StringBuilder? builder = null;
+        for (var i = 0; i < value.Length; i++)
+        {
+            var c = value[i];
+            char? replacement = null;
+            var drop = false;
+            if (c == '\0')
+            {
+                drop = true;
+            }
+            else if (char.IsHighSurrogate(c) && i + 1 < value.Length && char.IsLowSurrogate(value[i + 1]))
+            {
+                builder?.Append(c).Append(value[i + 1]);
+                i++;
+                continue;
+            }
+            else if (char.IsSurrogate(c))
+            {
+                replacement = '�';
+            }
+
+            if (!drop && replacement is null)
+            {
+                builder?.Append(c);
+                continue;
+            }
+
+            if (builder is null)
+            {
+                builder = new StringBuilder(value.Length);
+                builder.Append(value, 0, i);
+            }
+
+            if (replacement is { } r)
+            {
+                builder.Append(r);
+            }
+        }
+
+        return builder?.ToString() ?? value;
+    }
+
+    /// <summary>Cuts to at most <paramref name="max"/> chars, never between the two halves of a surrogate pair.</summary>
+    private static string Cut(string value, int max)
+    {
+        if (value.Length <= max)
+        {
+            return value;
+        }
+
+        var length = char.IsHighSurrogate(value[max - 1]) && char.IsLowSurrogate(value[max]) ? max - 1 : max;
+        return value[..length];
+    }
 }

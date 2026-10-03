@@ -1,9 +1,9 @@
 ---
 change_id: manual-version-scan
 title: Manual version scan
-status: implemented
+status: impl_reviewed
 created: 2026-09-30
-updated: 2026-10-01
+updated: 2026-10-03
 archived_at: null
 ---
 

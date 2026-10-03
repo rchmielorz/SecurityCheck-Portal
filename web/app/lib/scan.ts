@@ -81,6 +81,16 @@ export function isScanInProgress(status: ScanStatus): boolean {
 /** A scan queued for longer than this suggests that the worker is not running. */
 export const QUEUED_WARNING_MS = 2 * 60 * 1000;
 
+/** Polish age of a timestamp in whole days: "dziś", "1 dzień temu", "N dni temu"; "" for an unparseable timestamp. */
+export function describeAgeDays(iso: string, now = Date.now()): string {
+  const rawDays = Math.floor((now - new Date(iso).getTime()) / (24 * 60 * 60 * 1000));
+  if (!Number.isFinite(rawDays)) return "";
+  const days = Math.max(0, rawDays);
+  if (days === 0) return "dziś";
+  if (days === 1) return "1 dzień temu";
+  return `${days} dni temu`;
+}
+
 /** Polish count label for vulnerabilities, e.g. "1 podatność", "3 podatności", "5 podatności". */
 export function findingsCountLabel(count: number): string {
   if (count === 1) return "1 podatność";

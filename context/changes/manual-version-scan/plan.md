@@ -46,7 +46,7 @@ Decyzje z wywiadu (szczegóły w [plan-brief.md](plan-brief.md)): wspólny runne
 
 ## Critical Implementation Details
 
-- **State sequencing.** Przejścia statusu: `Queued → Running → {Completed | Incomplete | Failed}`; `Running → Failed(Interrupted)` tylko przy starcie workera. Częściowy unikalny indeks (jeden `Queued`/`Running` na `PatternId`) jest jedyną ochroną przed zdublowanym skanem, więc API musi traktować jego naruszenie jako wyścig (zwrócić istniejący skan), a nie błąd 500.
+- **State sequencing.** Przejścia statusu: `Queued → Running → {Completed | Incomplete | Failed}`; `Running → Failed(Interrupted)` tylko przy starcie workera (uzupełnienie: worker co minutę czyści też porzucone skany `Running` starsze niż suma limitów czasu, a istnienie dokładnie jednego workera wymusza advisory lock w PostgreSQL). Częściowy unikalny indeks (jeden `Queued`/`Running` na `PatternId`) jest jedyną ochroną przed zdublowanym skanem, więc API musi traktować jego naruszenie jako wyścig (zwrócić istniejący skan), a nie błąd 500.
 - **Izolacja Trivy.** Proces Trivy dostaje środowisko z białej listy (PATH, SystemRoot, TEMP/TMP, zmienne proxy, katalog cache), nigdy kopię środowiska workera, bo ta zawiera PAT, gdy konfiguracja idzie przez zmienne środowiskowe.
 - **Nigdy „brak wyników" bez dowodu.** UI pokazuje „brak wyników" tylko dla `Completed` z zerem podatności. `Incomplete` z zerem podatności pokazuje ostrzeżenie, że braku podatności nie można potwierdzić.
 

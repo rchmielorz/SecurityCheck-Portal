@@ -86,7 +86,7 @@ public sealed class GitCliCheckout(
                 return new GitCheckoutResult.Failure(GitErrorKind.Timeout, null);
             case ProcessOutcome.Exited when result.ExitCode != 0:
                 logger.LogWarning("git {Step} for {Url} exited with code {ExitCode}: {Stderr}",
-                    step, canonicalUrl, result.ExitCode, GitCliTagSource.FirstLine(result.Stderr));
+                    step, canonicalUrl, result.ExitCode, TextHelpers.FirstLine(result.Stderr));
                 return new GitCheckoutResult.Failure(GitErrorKind.Failed, result.ExitCode);
             default:
                 return null;

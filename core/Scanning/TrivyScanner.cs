@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using securitycheck_portal.Core.Data;
+using securitycheck_portal.Core.Git;
 using securitycheck_portal.Core.Processes;
 
 namespace securitycheck_portal.Core.Scanning;
@@ -42,8 +43,12 @@ public sealed class TrivyScanner(
     public const string ForbiddenVersion = "0.69.4";
 
     private const int MaxCapturedChars = 256 * 1024;
-    private const int MaxDetailLength = 300;
-    private static readonly TimeSpan VersionTimeout = TimeSpan.FromMinutes(1);
+
+    /// <summary>Limit of one <c>trivy version</c> call; a scan makes two (before and after the DB refresh).</summary>
+    public static readonly TimeSpan VersionTimeout = TimeSpan.FromMinutes(1);
+
+    /// <summary>How many <c>trivy version</c> calls one scan makes at most.</summary>
+    public const int VersionCallsPerScan = 2;
 
     /// <summary>The only variables Trivy inherits (plus <c>TRIVY_CACHE_DIR</c>, set from the options).</summary>
     public static readonly IReadOnlyList<string> InheritedEnvironment =
@@ -91,7 +96,7 @@ public sealed class TrivyScanner(
         else
         {
             logger.LogWarning("Trivy DB update did not succeed ({Outcome}, exit {ExitCode}): {Stderr}; using the cache if recent enough",
-                update.Outcome, update.ExitCode, FirstLine(update.Stderr));
+                update.Outcome, update.ExitCode, TextHelpers.FirstLine(update.Stderr));
         }
 
         if (dbUpdatedAt is null)
@@ -126,7 +131,7 @@ public sealed class TrivyScanner(
                         $"Trivy did not finish within {settings.ScanTimeoutMinutes} minutes.");
                 case ProcessOutcome.Exited when scan.ExitCode != 0:
                     return new ScanOutcome.Failed(ScanFailureReason.ScannerFailed,
-                        $"Trivy exited with code {scan.ExitCode}: {FirstLine(scan.Stderr)}");
+                        $"Trivy exited with code {scan.ExitCode}: {TextHelpers.FirstLine(scan.Stderr)}");
             }
 
             if (!File.Exists(reportPath))
@@ -234,7 +239,7 @@ public sealed class TrivyScanner(
         if (result.ExitCode != 0)
         {
             return Failure(ScanFailureReason.ScannerUnavailable,
-                $"trivy version exited with code {result.ExitCode}: {FirstLine(result.Stderr)}");
+                $"trivy version exited with code {result.ExitCode}: {TextHelpers.FirstLine(result.Stderr)}");
         }
 
         try
@@ -287,18 +292,6 @@ public sealed class TrivyScanner(
         }
 
         return null;
-    }
-
-    private static string FirstLine(string text)
-    {
-        var line = text.AsSpan().TrimStart();
-        var end = line.IndexOfAny('\r', '\n');
-        if (end >= 0)
-        {
-            line = line[..end];
-        }
-
-        return line.Length > MaxDetailLength ? line[..MaxDetailLength].ToString() : line.ToString();
     }
 
     private void TryDelete(string path)

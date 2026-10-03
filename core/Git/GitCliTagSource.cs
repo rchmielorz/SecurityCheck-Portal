@@ -14,7 +14,6 @@ public sealed class GitCliTagSource(
 {
     // git ls-remote --exit-code: 2 means no ref matched, i.e. the repository has no tags.
     private const int NoRefsExitCode = 2;
-    private const int MaxLoggedStderrLength = 300;
     private const int MaxCapturedChars = 8 * 1024 * 1024;
 
     public async Task<GitTagListing> ListTagsAsync(string canonicalUrl, CancellationToken cancellationToken)
@@ -43,7 +42,7 @@ public sealed class GitCliTagSource(
                 return new GitTagListing.Success("");
             default:
                 logger.LogWarning("git ls-remote for {Url} exited with code {ExitCode}: {Stderr}",
-                    canonicalUrl, result.ExitCode, FirstLine(result.Stderr));
+                    canonicalUrl, result.ExitCode, TextHelpers.FirstLine(result.Stderr));
                 return new GitTagListing.Failure(GitErrorKind.Failed, result.ExitCode);
         }
     }
@@ -59,17 +58,4 @@ public sealed class GitCliTagSource(
             ["ls-remote", "--tags", "--exit-code", "--end-of-options", canonicalUrl],
             GitTransferLimits.ListRemoteLimits,
             isWindows);
-
-    /// <summary>First line of git's stderr, cut short, for log messages.</summary>
-    internal static string FirstLine(string text)
-    {
-        var line = text.AsSpan().TrimStart();
-        var end = line.IndexOfAny('\r', '\n');
-        if (end >= 0)
-        {
-            line = line[..end];
-        }
-
-        return line.Length > MaxLoggedStderrLength ? line[..MaxLoggedStderrLength].ToString() : line.ToString();
-    }
 }

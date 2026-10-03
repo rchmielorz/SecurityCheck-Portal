@@ -33,8 +33,11 @@ const SHOW_INACTIVE_PARAM = "nieaktywne";
 const FOCUS_NEW_PATTERN_PARAM = "nowy";
 
 const SCAN_INACTIVE = "Wzorzec jest nieaktywny — aktywuj go, aby uruchomić skan.";
+const SCAN_ACTIVE_NO_ID = "Skan tego wzorca właśnie się zakończył lub trwa — odśwież stronę i spróbuj ponownie.";
 
-type Intent = "addPattern" | "resolve" | "scan" | "deactivate" | "activate" | "deletePattern" | "deleteRepo";
+const SCAN_QUEUED_RELOAD = "Skan został zakolejkowany — odśwież stronę, aby go zobaczyć.";
+
+type Intent ="addPattern" | "resolve" | "scan" | "deactivate" | "activate" | "deletePattern" | "deleteRepo";
 
 type ActionResult = { intent: Intent; error?: string };
 
@@ -88,7 +91,7 @@ async function readScanConflict(response: Response): Promise<ScanConflict | unde
   }
 }
 
-async function errorMessage(intent: Intent, response: Response): Promise<string> {
+async function errorMessage(intent: Intent, response: Response, scanConflict?: ScanConflict): Promise<string> {
   if (intent === "addPattern") {
     if (response.status === 400) return INVALID_PATTERN;
     if (response.status === 409) {
@@ -97,7 +100,12 @@ async function errorMessage(intent: Intent, response: Response): Promise<string>
   }
   if (intent === "deleteRepo" && response.status === 409) return REPO_HAS_PATTERNS;
   if (intent === "resolve" && response.status === 409) return RESOLVE_INACTIVE;
-  if (intent === "scan" && response.status === 409) return SCAN_INACTIVE;
+  if (intent === "scan" && response.status === 409) {
+    // "active" with a scanId is redirected in the action; here it has no scan to open.
+    if (scanConflict?.reason === "inactive") return SCAN_INACTIVE;
+    if (scanConflict?.reason === "active") return SCAN_ACTIVE_NO_ID;
+    return UNEXPECTED_ERROR;
+  }
   return UNEXPECTED_ERROR;
 }
 
@@ -154,15 +162,22 @@ export async function clientAction({ params, request }: Route.ClientActionArgs):
 
   const scanPage = (scanId: number) => redirect(`/repos/${encodeURIComponent(params.repoId)}/scans/${scanId}`);
 
+  let scanConflict: ScanConflict | undefined;
   if (intent === "scan") {
     // 202: a new scan was queued. 409 "active": a scan of this pattern is already queued or running.
     if (response.status === 202) {
-      const scan = (await response.json()) as ScanRequest;
-      return scanPage(scan.id);
+      try {
+        const scan = (await response.json()) as ScanRequest;
+        if (typeof scan?.id === "number") return scanPage(scan.id);
+      } catch {
+        // Fall through: the scan was queued even though the body is unreadable.
+      }
+      return { intent, error: SCAN_QUEUED_RELOAD };
     }
     if (response.status === 409) {
-      const conflict = await readScanConflict(response);
-      if (conflict?.reason === "active" && conflict.scanId != null) return scanPage(conflict.scanId);
+      // The body is read exactly once; errorMessage gets the parsed value.
+      scanConflict = await readScanConflict(response);
+      if (scanConflict?.reason === "active" && scanConflict.scanId != null) return scanPage(scanConflict.scanId);
     }
   }
 
@@ -170,7 +185,7 @@ export async function clientAction({ params, request }: Route.ClientActionArgs):
     return intent === "deleteRepo" ? redirect("/") : { intent };
   }
 
-  return { intent, error: await errorMessage(intent, response) };
+  return { intent, error: await errorMessage(intent, response, scanConflict) };
 }
 
 type PendingDelete = {

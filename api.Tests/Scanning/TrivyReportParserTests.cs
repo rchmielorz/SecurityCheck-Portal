@@ -163,4 +163,61 @@ public sealed class TrivyReportParserTests
         Assert.False(TrivyReportParser.TryParse(json, out var report));
         Assert.Null(report);
     }
+
+    private static string Report(string title = "t", string library = "lib", string target = "a") => $$"""
+        {"Results":[{"Target":"{{target}}","Vulnerabilities":[{"VulnerabilityID":"CVE-1","PkgName":"{{library}}","InstalledVersion":"1","Severity":"HIGH","Title":"{{title}}"}]}]}
+        """;
+
+    [Fact]
+    public void Nul_characters_are_removed_from_title_library_and_target()
+    {
+        Assert.True(TrivyReportParser.TryParse(Report("ti\\u0000tle", "l\\u0000ib", "ta\\u0000rget"), out var report));
+
+        var finding = report!.Findings.Single();
+        Assert.Equal("title", finding.Title);
+        Assert.Equal("lib", finding.Library);
+        Assert.Equal(["target"], finding.Targets);
+    }
+
+    [Fact]
+    public void Lone_surrogates_become_the_replacement_character_and_pairs_survive()
+    {
+        Assert.True(TrivyReportParser.TryParse(Report("a\\ud800b\\udc00c \\ud83d\\ude00"), out var report));
+
+        Assert.Equal("a�b�c \U0001F600", report!.Findings.Single().Title);
+    }
+
+    [Fact]
+    public void Emoji_ending_exactly_at_the_length_limit_is_kept_whole()
+    {
+        var title = new string('x', ScanFinding.TitleMaxLength - 2) + "\U0001F600";
+
+        Assert.True(TrivyReportParser.TryParse(Report(title), out var report));
+
+        Assert.Equal(title, report!.Findings.Single().Title);
+    }
+
+    [Fact]
+    public void Emoji_straddling_the_length_limit_is_dropped_not_split()
+    {
+        var title = new string('x', ScanFinding.TitleMaxLength - 1) + "\U0001F600";
+
+        Assert.True(TrivyReportParser.TryParse(Report(title), out var report));
+
+        var stored = report!.Findings.Single().Title!;
+        Assert.Equal(new string('x', ScanFinding.TitleMaxLength - 1), stored);
+        Assert.DoesNotContain(stored, char.IsSurrogate);
+    }
+
+    [Fact]
+    public void Over_long_title_and_library_are_cut_to_the_column_size()
+    {
+        Assert.True(TrivyReportParser.TryParse(
+            Report(new string('t', 5000), new string('l', 5000), new string('a', 5000)), out var report));
+
+        var finding = report!.Findings.Single();
+        Assert.Equal(ScanFinding.TitleMaxLength, finding.Title!.Length);
+        Assert.Equal(ScanFinding.LibraryMaxLength, finding.Library.Length);
+        Assert.Equal(5000, finding.Targets.Single().Length);
+    }
 }
