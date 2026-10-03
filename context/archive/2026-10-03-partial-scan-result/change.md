@@ -1,10 +1,10 @@
 ---
 change_id: partial-scan-result
 title: Informacja o częściowo udanym skanie (przeskanowane i nieprzeskanowane projekty)
-status: impl_reviewed
+status: archived
 created: 2026-10-03
 updated: 2026-10-03
-archived_at: null
+archived_at: 2026-10-03T15:20:32Z
 ---
 
 ## Notes
