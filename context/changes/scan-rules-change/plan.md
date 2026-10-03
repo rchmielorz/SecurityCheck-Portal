@@ -249,8 +249,8 @@ Brak migracji bazy. Wymaga zmiany na serwerze: SDK .NET, dostęp do feedów NuGe
 
 #### Automated
 
-- [x] 4.1 Całość buduje się i przechodzi testy: `dotnet build && dotnet test`
+- [x] 4.1 Całość buduje się i przechodzi testy: `dotnet build && dotnet test` — 0907b7d
 
 #### Manual
 
-- [x] 4.2 Admin serwera potwierdza, że SDK i feedy NuGet da się skonfigurować dla konta workera zgodnie z opisem
+- [x] 4.2 Admin serwera potwierdza, że SDK i feedy NuGet da się skonfigurować dla konta workera zgodnie z opisem — 0907b7d

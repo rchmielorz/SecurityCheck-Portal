@@ -1,7 +1,7 @@
 ---
 change_id: scan-rules-change
 title: Zmiana reguł skanowania – lock files w projektach GitLab nie są wymagane
-status: implementing
+status: implemented
 created: 2026-10-03
 updated: 2026-10-03
 archived_at: null
