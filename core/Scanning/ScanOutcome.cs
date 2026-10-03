@@ -15,11 +15,12 @@ public abstract record ScanOutcome
 
     /// <summary>
     /// Findings are shown, but the absence of others cannot be confirmed: lock files are missing
-    /// (not present and not generated) or Trivy found no dependency file at all (then <c>MissingLockFiles</c> may be empty).
+    /// (not present and not generated; each <see cref="UnscannedItem"/> says why) or Trivy found no dependency file
+    /// at all (then <c>Unscanned</c> may be empty).
     /// </summary>
     public sealed record Incomplete(
         IReadOnlyList<ScanFinding> Findings,
-        IReadOnlyList<string> MissingLockFiles,
+        IReadOnlyList<UnscannedItem> Unscanned,
         string TrivyVersion,
         DateTimeOffset DbUpdatedAt) : ScanOutcome;
 

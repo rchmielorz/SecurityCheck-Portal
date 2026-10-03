@@ -101,8 +101,42 @@ public sealed class TrivyScannerTests : IDisposable
         var outcome = await Scanner.ScanAsync(_checkout, CancellationToken.None);
 
         var incomplete = Assert.IsType<ScanOutcome.Incomplete>(outcome);
-        Assert.Equal(["packages.lock.json"], incomplete.MissingLockFiles);
+        var item = Assert.Single(incomplete.Unscanned);
+        Assert.Equal("packages.lock.json", item.Path);
+        Assert.Equal(UnscannedReason.NoLockFile, item.Reason);
         Assert.Single(incomplete.Findings);
+    }
+
+    [Fact]
+    public async Task Npm_manifest_without_lock_is_reported_as_no_lock_file()
+    {
+        _trivy.Version = VersionJson("0.58.0", Now.AddDays(-1));
+        _trivy.Report = EmptyReport;
+        File.WriteAllText(Path.Combine(_checkout, "package.json"), "{}");
+
+        var outcome = await Scanner.ScanAsync(_checkout, CancellationToken.None);
+
+        var incomplete = Assert.IsType<ScanOutcome.Incomplete>(outcome);
+        var item = Assert.Single(incomplete.Unscanned);
+        Assert.Equal("package-lock.json", item.Path);
+        Assert.Equal(UnscannedReason.NoLockFile, item.Reason);
+    }
+
+    [Fact]
+    public async Task Directory_with_two_projects_is_reported_as_multiple_projects_without_a_restore()
+    {
+        _trivy.Version = VersionJson("0.58.0", Now.AddDays(-1));
+        _trivy.Report = EmptyReport;
+        File.WriteAllText(Path.Combine(_checkout, "A.csproj"), "");
+        File.WriteAllText(Path.Combine(_checkout, "B.csproj"), "");
+
+        var outcome = await Scanner.ScanAsync(_checkout, CancellationToken.None);
+
+        var incomplete = Assert.IsType<ScanOutcome.Incomplete>(outcome);
+        var item = Assert.Single(incomplete.Unscanned);
+        Assert.Equal("packages.lock.json", item.Path);
+        Assert.Equal(UnscannedReason.MultipleProjects, item.Reason);
+        Assert.Empty(_dotnet.Calls);
     }
 
     [Fact]
@@ -131,7 +165,10 @@ public sealed class TrivyScannerTests : IDisposable
         var outcome = await Scanner.ScanAsync(_checkout, CancellationToken.None);
 
         var incomplete = Assert.IsType<ScanOutcome.Incomplete>(outcome);
-        Assert.Equal(["packages.lock.json"], incomplete.MissingLockFiles);
+        var item = Assert.Single(incomplete.Unscanned);
+        Assert.Equal("packages.lock.json", item.Path);
+        Assert.Equal(UnscannedReason.RestoreFailed, item.Reason);
+        Assert.Equal("error NU1101", item.Detail);
     }
 
     [Fact]

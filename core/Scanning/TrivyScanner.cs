@@ -118,7 +118,7 @@ public sealed class TrivyScanner(
 
         // 2b. Generate the missing packages.lock.json of .NET projects (after the DB gate: no restore for a scan
         // that cannot happen anyway). Best effort; projects that still lack a lock are reported in step 4.
-        await lockFileGenerator.GenerateAsync(checkoutDirectory, cancellationToken);
+        var generatorItems = await lockFileGenerator.GenerateAsync(checkoutDirectory, cancellationToken);
 
         // 3. Scan. The report is written next to the checkouts, never inside the scanned directory.
         var reportPath = Path.Combine(settings.WorkRoot, "trivy-report-" + Guid.NewGuid().ToString("N") + ".json");
@@ -152,11 +152,30 @@ public sealed class TrivyScanner(
             }
 
             // 4. Never "clean" without proof: lock files still missing after generation (npm, or a NuGet restore
-            // that failed) or no target at all means incomplete.
+            // that failed) or no target at all means incomplete. Each missing path gets the generator's reason, or
+            // NoLockFile when the generator had none (npm).
             var missing = lockFileDetector.FindMissing(checkoutDirectory);
             if (missing.Count > 0 || report.TargetCount == 0)
             {
-                return new ScanOutcome.Incomplete(report.Findings, missing, info.Version!, dbUpdatedAt.Value);
+                var reasons = new Dictionary<string, UnscannedItem>(StringComparer.Ordinal);
+                foreach (var item in generatorItems)
+                {
+                    reasons.TryAdd(item.Path, item);
+                }
+
+                var seen = new HashSet<string>(StringComparer.Ordinal);
+                var unscanned = new List<UnscannedItem>();
+                foreach (var path in missing)
+                {
+                    if (seen.Add(path))
+                    {
+                        unscanned.Add(reasons.TryGetValue(path, out var item)
+                            ? item
+                            : new UnscannedItem(path, UnscannedReason.NoLockFile));
+                    }
+                }
+
+                return new ScanOutcome.Incomplete(report.Findings, unscanned, info.Version!, dbUpdatedAt.Value);
             }
 
             return new ScanOutcome.Completed(report.Findings, info.Version!, dbUpdatedAt.Value);

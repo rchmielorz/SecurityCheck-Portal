@@ -215,7 +215,8 @@ public sealed class ScanJobRunner(
             case ScanOutcome.Incomplete incomplete:
                 status = ScanStatus.Incomplete;
                 (findings, trivyVersion, dbUpdatedAt) = (incomplete.Findings, ClipVersion(incomplete.TrivyVersion), incomplete.DbUpdatedAt);
-                missingLockFiles = [.. incomplete.MissingLockFiles];
+                // TEMP (phase 3 of partial-scan-result): replaced by ScanUnscannedItem rows
+                missingLockFiles = [.. incomplete.Unscanned.Select(u => u.Path)];
                 break;
             case ScanOutcome.Failed failed:
                 status = ScanStatus.Failed;

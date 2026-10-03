@@ -281,18 +281,18 @@ Migracja przenosi dane i usuwa kolumnę `MissingLockFiles` (z `Down`). API zmien
 
 #### Automated
 
-- [x] 1.1 Testy detektora przechodzą: `dotnet test api.Tests -c Release --filter LockFileDetectorTests`
-- [x] 1.2 Testy generatora przechodzą: `dotnet test api.Tests -c Release --filter DotnetLockFileGeneratorTests`
-- [x] 1.3 Nowe testy detektora: katalog z dwoma `.csproj` bez locka trafia do `FindDirectoriesWithMultipleProjects` i nie do `FindDotnetProjectsWithoutLock`; katalog z dwoma `.csproj` i `packages.config`/lockiem nie jest zgłaszany
-- [x] 1.4 Nowe testy generatora: powód i szczegół dla kodu wyjścia ≠ 0, timeoutu, `StartFailed`, wyczerpanego budżetu; katalog z wieloma projektami daje `MultipleProjects` bez wywołania `dotnet`; udany restore nie daje pozycji
+- [x] 1.1 Testy detektora przechodzą: `dotnet test api.Tests -c Release --filter LockFileDetectorTests` — 1882985
+- [x] 1.2 Testy generatora przechodzą: `dotnet test api.Tests -c Release --filter DotnetLockFileGeneratorTests` — 1882985
+- [x] 1.3 Nowe testy detektora: katalog z dwoma `.csproj` bez locka trafia do `FindDirectoriesWithMultipleProjects` i nie do `FindDotnetProjectsWithoutLock`; katalog z dwoma `.csproj` i `packages.config`/lockiem nie jest zgłaszany — 1882985
+- [x] 1.4 Nowe testy generatora: powód i szczegół dla kodu wyjścia ≠ 0, timeoutu, `StartFailed`, wyczerpanego budżetu; katalog z wieloma projektami daje `MultipleProjects` bez wywołania `dotnet`; udany restore nie daje pozycji — 1882985
 
 ### Phase 2: Wynik skanu niesie powody
 
 #### Automated
 
-- [ ] 2.1 Testy scanera przechodzą: `dotnet test api.Tests -c Release --filter TrivyScannerTests`
-- [ ] 2.2 Nowe testy scanera: npm bez locka → `NoLockFile`; nieudany restore → `RestoreFailed` z szczegółem; katalog z wieloma `.csproj` → `MultipleProjects`; udany restore → `Completed` jak dotąd
-- [ ] 2.3 Pełny zestaw: `dotnet test api.Tests -c Release`
+- [x] 2.1 Testy scanera przechodzą: `dotnet test api.Tests -c Release --filter TrivyScannerTests`
+- [x] 2.2 Nowe testy scanera: npm bez locka → `NoLockFile`; nieudany restore → `RestoreFailed` z szczegółem; katalog z wieloma `.csproj` → `MultipleProjects`; udany restore → `Completed` jak dotąd
+- [x] 2.3 Pełny zestaw: `dotnet test api.Tests -c Release`
 
 ### Phase 3: Zapis i API
 

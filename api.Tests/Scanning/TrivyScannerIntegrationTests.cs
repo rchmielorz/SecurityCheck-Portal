@@ -55,7 +55,7 @@ public sealed class TrivyScannerIntegrationTests : IDisposable
         Assert.False(outcome is ScanOutcome.Failed, outcome.ToString());
         var incomplete = Assert.IsType<ScanOutcome.Incomplete>(outcome);
         Assert.Empty(incomplete.Findings);
-        Assert.Equal(["packages.lock.json"], incomplete.MissingLockFiles);
+        Assert.Equal(["packages.lock.json"], incomplete.Unscanned.Select(u => u.Path));
     }
 
     private TrivyScanner CreateScanner()

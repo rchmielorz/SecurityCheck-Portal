@@ -106,7 +106,7 @@ public sealed class ScanJobRunnerTests : IClassFixture<DatabasePortalFactory>, I
         _factory.SkipIfDatabaseUnavailable();
         var seed = await SeedAsync();
         _scanner.Outcome = new ScanOutcome.Incomplete(
-            [Finding("lodash", "CVE-1", FindingSeverity.Critical)], ["src/app/packages.lock.json"], "0.58.0", DbDate);
+            [Finding("lodash", "CVE-1", FindingSeverity.Critical)], [new UnscannedItem("src/app/packages.lock.json", UnscannedReason.NoLockFile)], "0.58.0", DbDate);
 
         await Runner.RunAsync(seed.ScanId, CancellationToken.None);
 
@@ -358,7 +358,7 @@ public sealed class ScanJobRunnerTests : IClassFixture<DatabasePortalFactory>, I
         _factory.SkipIfDatabaseUnavailable();
         var seed = await SeedAsync();
         _scanner.Outcome = incomplete
-            ? new ScanOutcome.Incomplete([Finding("lodash", "CVE-1", FindingSeverity.High)], ["a/packages.lock.json"], "0.58.0", DbDate)
+            ? new ScanOutcome.Incomplete([Finding("lodash", "CVE-1", FindingSeverity.High)], [new UnscannedItem("a/packages.lock.json", UnscannedReason.NoLockFile)], "0.58.0", DbDate)
             : new ScanOutcome.Completed([Finding("lodash", "CVE-1", FindingSeverity.High)], "0.58.0", DbDate);
 
         // The sweep (or recovery) fails the row after the runner read it as Running and before it writes the result.
