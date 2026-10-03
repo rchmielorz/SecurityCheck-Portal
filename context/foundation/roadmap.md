@@ -3,7 +3,7 @@ project: SecurityCheck Portal
 version: 1
 status: draft                    # draft | active | locked
 created: 2026-09-26
-updated: 2026-10-01
+updated: 2026-10-03
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -45,7 +45,7 @@ Zespół maintenance nie sprawdza regularnie podatności w bibliotekach starszyc
 | F-01 | [#1](https://github.com/rchmielorz/SecurityCheck-Portal/issues/1) | authenticated-app-shell | (foundation) każda strona i endpoint wymagają zalogowania; UI i API działają pod jednym originem | —             | NFR, Access Control, FR-001       | done |
 | F-02 | [#2](https://github.com/rchmielorz/SecurityCheck-Portal/issues/2) | deploy-skeleton        | (foundation) merge do `main` buduje, sprawdza i wdraża portal na serwer docelowy     | F-01, przygotowany serwer | NFR, Access Control               | proposed |
 | S-01 | [#3](https://github.com/rchmielorz/SecurityCheck-Portal/issues/3) | repo-version-pattern   | zalogować się, dodać repozytorium i wzorzec wersji oraz zobaczyć, na jaką wersję wzorzec się rozwiązuje | F-01          | FR-001, FR-002, FR-003            | done |
-| S-02 | [#4](https://github.com/rchmielorz/SecurityCheck-Portal/issues/4) | manual-version-scan    | ręcznie uruchomić skan wersji i zobaczyć podatności posortowane wg istotności albo jawne „brak wyników” | S-01          | US-01, FR-004, FR-006             | in-progress |
+| S-02 | [#4](https://github.com/rchmielorz/SecurityCheck-Portal/issues/4) | manual-version-scan    | ręcznie uruchomić skan wersji i zobaczyć podatności posortowane wg istotności albo jawne „brak wyników” | S-01          | US-01, FR-004, FR-006             | done |
 | S-03 | [#5](https://github.com/rchmielorz/SecurityCheck-Portal/issues/5) | scan-history           | przejrzeć historię poprzednich skanów danej wersji i trend liczby/poziomu podatności | S-02          | FR-007                            | proposed |
 | S-04 | [#6](https://github.com/rchmielorz/SecurityCheck-Portal/issues/6) | accepted-risk-triage   | oznaczyć podatność jako zaakceptowane ryzyko z komentarzem i odfiltrować takie pozycje w kolejnych skanach | S-02          | FR-008, FR-006, Business Logic    | proposed |
 | S-05 | [#7](https://github.com/rchmielorz/SecurityCheck-Portal/issues/7) | scheduled-scans        | skonfigurować cykliczny, automatyczny skan danej wersji                               | S-02          | FR-005                            | proposed |
@@ -130,7 +130,7 @@ Fundamenty poniżej zakładają ten stan i nie tworzą ponownie tego, co istniej
   - Czy skanowane repozytoria mają pliki blokady zależności? Bez nich zewnętrzny skaner (Trivy) może pominąć część bibliotek — ryzyko fałszywego „brak wyników”. — Owner: user. Block: no.
   - Skąd serwer pobiera bazę podatności skanera (bezpośrednio przez proxy czy lokalny mirror)? — Owner: team. Block: no.
 - **Risk:** Gwiazda przewodnia; skan trwa minuty, więc musi działać poza cyklem życia żądania HTTP i odróżniać „nieudany” od „czysty” — największe ryzyko wiarygodności, dlatego nic poza S-01 go nie poprzedza.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-03: Historia skanów wersji
 
@@ -200,3 +200,4 @@ Fundamenty poniżej zakładają ten stan i nie tworzą ponownie tego, co istniej
 
 - **F-01: (foundation) szablon API usunięty; UI serwowane pod tym samym originem co API; każda trasa UI i każdy endpoint API odrzuca niezalogowanego użytkownika, a zalogowany widzi pustą powłokę portalu ze swoją tożsamością.** — Archived 2026-09-27 → `context/archive/2026-09-26-authenticated-app-shell/`. Lesson: —.
 - **S-01: użytkownik może zalogować się, dodać repozytorium Git i wzorzec wersji (np. `2.1.*`) oraz zobaczyć, na jaką konkretną wersję wzorzec się obecnie rozwiązuje.** — Archived 2026-09-29 → `context/archive/2026-09-26-repo-version-pattern/`. Lesson: —.
+- **S-02: użytkownik może ręcznie uruchomić skan dla wybranej wersji i po jego zakończeniu zobaczyć podatności (biblioteka, CVE, istotność) posortowane od critical do low, jawne „brak wyników”, gdy nic nie wykryto, oraz jawny błąd, gdy skan się nie powiódł.** — Archived 2026-10-03 → `context/archive/2026-09-30-manual-version-scan/`. Lesson: —.
