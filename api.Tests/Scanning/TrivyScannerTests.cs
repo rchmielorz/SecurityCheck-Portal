@@ -42,7 +42,7 @@ public sealed class TrivyScannerTests : IDisposable
     private TrivyScanner Scanner => new(
         Options.Create(_options), _trivy, new LockFileDetector(),
         new DotnetLockFileGenerator(
-            Options.Create(_options), _dotnet, new LockFileDetector(), NullLogger<DotnetLockFileGenerator>.Instance),
+            Options.Create(_options), _dotnet, new LockFileDetector(), new FixedTime(Now), NullLogger<DotnetLockFileGenerator>.Instance),
         new FixedTime(Now), NullLogger<TrivyScanner>.Instance);
 
     private void WithLockFile() => File.WriteAllText(Path.Combine(_checkout, "packages.lock.json"), "{}");
@@ -132,6 +132,23 @@ public sealed class TrivyScannerTests : IDisposable
 
         var incomplete = Assert.IsType<ScanOutcome.Incomplete>(outcome);
         Assert.Equal(["packages.lock.json"], incomplete.MissingLockFiles);
+    }
+
+    [Fact]
+    public async Task Lock_files_are_generated_before_trivy_scans()
+    {
+        _trivy.Version = VersionJson("0.58.0", Now.AddDays(-1));
+        _trivy.Report = EmptyReport;
+        File.WriteAllText(Path.Combine(_checkout, "App.csproj"), "");
+        _dotnet.WritesLockFile = true;
+        var scanStartedBeforeRestore = false;
+        _dotnet.OnCall = () => scanStartedBeforeRestore = _trivy.Calls.Any(c => c.Subcommand == "fs");
+
+        await Scanner.ScanAsync(_checkout, CancellationToken.None);
+
+        Assert.Single(_dotnet.Calls);
+        Assert.False(scanStartedBeforeRestore, "restore must run before trivy fs");
+        Assert.Contains(_trivy.Calls, c => c.Subcommand == "fs");
     }
 
     [Fact]
@@ -379,10 +396,13 @@ public sealed class TrivyScannerTests : IDisposable
 
         public List<ProcessStartInfo> Calls { get; } = [];
 
+        public Action? OnCall { get; set; }
+
         public Task<ProcessRunResult> RunAsync(
             ProcessStartInfo startInfo, TimeSpan timeout, int maxCapturedChars, CancellationToken cancellationToken)
         {
             Calls.Add(startInfo);
+            OnCall?.Invoke();
             if (WritesLockFile && Result.ExitCode == 0)
             {
                 var project = startInfo.ArgumentList[1];

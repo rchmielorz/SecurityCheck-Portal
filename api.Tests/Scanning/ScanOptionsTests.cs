@@ -34,6 +34,7 @@ public sealed class ScanOptionsTests
         Assert.Equal("trivy", options.TrivyExecutablePath);
         Assert.Equal("dotnet", options.DotnetExecutablePath);
         Assert.Equal(10, options.RestoreTimeoutMinutes);
+        Assert.Equal(20, options.RestoreTotalTimeoutMinutes);
         Assert.Equal(15, options.ScanTimeoutMinutes);
         Assert.Equal(10, options.CloneTimeoutMinutes);
         Assert.Equal(5, options.DbUpdateTimeoutMinutes);
@@ -73,6 +74,9 @@ public sealed class ScanOptionsTests
     [InlineData("Scan:ScanTimeoutMinutes", "121")]
     [InlineData("Scan:RestoreTimeoutMinutes", "0")]
     [InlineData("Scan:RestoreTimeoutMinutes", "121")]
+    [InlineData("Scan:RestoreTotalTimeoutMinutes", "0")]
+    [InlineData("Scan:RestoreTotalTimeoutMinutes", "241")]
+    [InlineData("Scan:DotnetExecutablePath", "")]
     [InlineData("Scan:MaxDbAgeDays", "0")]
     [InlineData("Scan:MaxDbAgeDays", "91")]
     [InlineData("Scan:CloneTimeoutMinutes", "0")]

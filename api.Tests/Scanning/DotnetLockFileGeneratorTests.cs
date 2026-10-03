@@ -10,12 +10,14 @@ public sealed class DotnetLockFileGeneratorTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "lockgen-" + Guid.NewGuid().ToString("N"));
     private readonly FakeDotnet _dotnet = new();
+    private readonly AdjustableTime _time = new();
     private readonly ScanOptions _options = new()
     {
         DotnetExecutablePath = "dotnet-under-test",
         CacheDirectory = "cache",
         WorkRoot = "work",
         RestoreTimeoutMinutes = 7,
+        RestoreTotalTimeoutMinutes = 20,
     };
 
     public DotnetLockFileGeneratorTests() => Directory.CreateDirectory(_root);
@@ -23,7 +25,7 @@ public sealed class DotnetLockFileGeneratorTests : IDisposable
     public void Dispose() => Directory.Delete(_root, recursive: true);
 
     private DotnetLockFileGenerator Generator => new(
-        Options.Create(_options), _dotnet, new LockFileDetector(), NullLogger<DotnetLockFileGenerator>.Instance);
+        Options.Create(_options), _dotnet, new LockFileDetector(), _time, NullLogger<DotnetLockFileGenerator>.Instance);
 
     [Fact]
     public async Task Restore_runs_per_project_without_lock_with_the_expected_arguments()
@@ -60,14 +62,15 @@ public sealed class DotnetLockFileGeneratorTests : IDisposable
     [Fact]
     public void Environment_is_a_whitelist_and_does_not_leak_other_variables()
     {
-        const string secretName = "SCW_TEST_SECRET";
+        const string secretName = "Git__Token";
+        var previous = Environment.GetEnvironmentVariable(secretName);
         Environment.SetEnvironmentVariable(secretName, "must-not-leak");
         try
         {
             var startInfo = DotnetLockFileGenerator.CreateStartInfo(_options, Path.Combine(_root, "App.csproj"));
 
             Assert.DoesNotContain(secretName, startInfo.Environment.Keys);
-            Assert.DoesNotContain("Git__Token", DotnetLockFileGenerator.InheritedEnvironment);
+            Assert.DoesNotContain(secretName, DotnetLockFileGenerator.InheritedEnvironment);
             var allowed = DotnetLockFileGenerator.InheritedEnvironment
                 .Concat(["DOTNET_CLI_TELEMETRY_OPTOUT", "DOTNET_NOLOGO", "DOTNET_SKIP_FIRST_TIME_EXPERIENCE"])
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -76,7 +79,7 @@ public sealed class DotnetLockFileGeneratorTests : IDisposable
         }
         finally
         {
-            Environment.SetEnvironmentVariable(secretName, null);
+            Environment.SetEnvironmentVariable(secretName, previous);
         }
     }
 
@@ -111,12 +114,58 @@ public sealed class DotnetLockFileGeneratorTests : IDisposable
         Touch("a/A.csproj");
         Touch("b/B.csproj");
         using var cts = new CancellationTokenSource();
-        _dotnet.OnRun = () => cts.Cancel();
+        _dotnet.OnRun = _ => cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => Generator.GenerateAsync(_root, cts.Token));
 
         Assert.Single(_dotnet.Calls);
+    }
+
+    [Fact]
+    public async Task Projects_after_the_total_budget_is_used_up_are_not_restored()
+    {
+        Touch("a/A.csproj");
+        Touch("b/B.csproj");
+        Touch("c/C.csproj");
+        _options.RestoreTotalTimeoutMinutes = 20;
+        _options.RestoreTimeoutMinutes = 10;
+        // Each restore "takes" 12 minutes: the first two fit the 20-minute budget (the second is cut to 8), the third does not.
+        _dotnet.OnRun = _ => _time.Advance(TimeSpan.FromMinutes(12));
+
+        await Generator.GenerateAsync(_root, CancellationToken.None);
+
+        Assert.Equal(2, _dotnet.Calls.Count);
+        Assert.Equal(TimeSpan.FromMinutes(10), _dotnet.Timeouts[0]);
+        Assert.Equal(TimeSpan.FromMinutes(8), _dotnet.Timeouts[1]);
+    }
+
+    [Theory]
+    [InlineData(ProcessOutcome.TimedOut, null)]
+    [InlineData(ProcessOutcome.Exited, 1)]
+    [InlineData(ProcessOutcome.StartFailed, null)]
+    public async Task Partial_lock_file_left_by_a_failed_restore_is_removed(ProcessOutcome outcome, int? exitCode)
+    {
+        Touch("src/App.csproj");
+        var lockPath = Path.Combine(_root, "src", "packages.lock.json");
+        _dotnet.OnRun = _ => File.WriteAllText(lockPath, "{ \"version\": 1, \"depend");
+        _dotnet.Results.Enqueue(new ProcessRunResult(outcome, exitCode, "", ""));
+
+        await Generator.GenerateAsync(_root, CancellationToken.None);
+
+        Assert.False(File.Exists(lockPath));
+    }
+
+    [Fact]
+    public async Task Lock_file_of_a_successful_restore_is_kept()
+    {
+        Touch("src/App.csproj");
+        var lockPath = Path.Combine(_root, "src", "packages.lock.json");
+        _dotnet.OnRun = _ => File.WriteAllText(lockPath, "{}");
+
+        await Generator.GenerateAsync(_root, CancellationToken.None);
+
+        Assert.True(File.Exists(lockPath));
     }
 
     private void Touch(string relativePath)
@@ -126,20 +175,31 @@ public sealed class DotnetLockFileGeneratorTests : IDisposable
         File.WriteAllText(path, "");
     }
 
+    private sealed class AdjustableTime : TimeProvider
+    {
+        private DateTimeOffset _now = new(2026, 10, 3, 12, 0, 0, TimeSpan.Zero);
+
+        public override DateTimeOffset GetUtcNow() => _now;
+
+        public void Advance(TimeSpan by) => _now += by;
+    }
+
     private sealed class FakeDotnet : IProcessRunner
     {
         public List<(ProcessStartInfo StartInfo, TimeSpan Timeout)> Calls { get; } = [];
 
+        public IReadOnlyList<TimeSpan> Timeouts => Calls.Select(c => c.Timeout).ToList();
+
         /// <summary>Results handed out in order; a call beyond the queue succeeds.</summary>
         public Queue<ProcessRunResult> Results { get; } = new();
 
-        public Action? OnRun { get; set; }
+        public Action<ProcessStartInfo>? OnRun { get; set; }
 
         public Task<ProcessRunResult> RunAsync(
             ProcessStartInfo startInfo, TimeSpan timeout, int maxCapturedChars, CancellationToken cancellationToken)
         {
             Calls.Add((startInfo, timeout));
-            OnRun?.Invoke();
+            OnRun?.Invoke(startInfo);
             cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult(Results.TryDequeue(out var result)
                 ? result

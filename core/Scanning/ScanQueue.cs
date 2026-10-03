@@ -96,10 +96,12 @@ public sealed class ScanQueue(
     /// <summary>
     /// How long a scan may stay <c>Running</c> before the sweep treats it as abandoned: the sum of every timeout
     /// the pipeline can spend (git ls-remote and rev-parse use <c>Git:TimeoutSeconds</c>, the clone, the DB update
-    /// and the scan their own limits, <c>trivy version</c> runs twice) plus a margin.
+    /// and the scan their own limits, the restore of .NET lock files <c>Scan:RestoreTotalTimeoutMinutes</c> in total,
+    /// <c>trivy version</c> runs twice) plus a margin.
     /// </summary>
     public static TimeSpan AbandonedAfter(ScanOptions options, GitOptions gitOptions)
-        => TimeSpan.FromMinutes(options.CloneTimeoutMinutes + options.ScanTimeoutMinutes + options.DbUpdateTimeoutMinutes)
+        => TimeSpan.FromMinutes(options.CloneTimeoutMinutes + options.ScanTimeoutMinutes + options.DbUpdateTimeoutMinutes
+               + options.RestoreTotalTimeoutMinutes)
            + TimeSpan.FromSeconds(gitOptions.TimeoutSeconds * GitShortCallsPerScan)
            + TrivyScanner.VersionTimeout * TrivyScanner.VersionCallsPerScan
            + AbandonedMargin;

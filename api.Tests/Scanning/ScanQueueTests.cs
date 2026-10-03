@@ -188,13 +188,16 @@ public sealed class ScanQueueTests(DatabasePortalFactory factory) : IClassFixtur
     [Fact]
     public void Abandoned_limit_is_the_sum_of_all_timeouts_plus_a_margin()
     {
-        var scan = new ScanOptions { CloneTimeoutMinutes = 10, ScanTimeoutMinutes = 15, DbUpdateTimeoutMinutes = 5 };
+        var scan = new ScanOptions
+        {
+            CloneTimeoutMinutes = 10, ScanTimeoutMinutes = 15, DbUpdateTimeoutMinutes = 5, RestoreTotalTimeoutMinutes = 20,
+        };
         var git = new GitOptions { TimeoutSeconds = 30 };
 
         var limit = ScanQueue.AbandonedAfter(scan, git);
 
-        // 30 min (clone + scan + DB) + 2 x 30 s git + 2 x 1 min trivy version + 5 min margin
-        Assert.Equal(TimeSpan.FromMinutes(30 + 1 + 2 + 5), limit);
+        // 30 min (clone + scan + DB) + 20 min restore budget + 2 x 30 s git + 2 x 1 min trivy version + 5 min margin
+        Assert.Equal(TimeSpan.FromMinutes(30 + 20 + 1 + 2 + 5), limit);
         Assert.True(ScanQueue.AbandonedAfter(scan, new GitOptions { TimeoutSeconds = 600 }) > limit);
     }
 

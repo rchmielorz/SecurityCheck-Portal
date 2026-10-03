@@ -79,7 +79,7 @@ public sealed class TrivyScannerIntegrationTests : IDisposable
             runner,
             new LockFileDetector(),
             new DotnetLockFileGenerator(
-                Options.Create(options), runner, new LockFileDetector(), NullLogger<DotnetLockFileGenerator>.Instance),
+                Options.Create(options), runner, new LockFileDetector(), TimeProvider.System, NullLogger<DotnetLockFileGenerator>.Instance),
             TimeProvider.System,
             NullLogger<TrivyScanner>.Instance);
     }

@@ -31,6 +31,10 @@ public sealed class ScanOptions
     [Range(1, 120)]
     public int RestoreTimeoutMinutes { get; set; } = 10;
 
+    /// <summary>Limit of all <c>dotnet restore</c> calls of one scan together; later projects stay without a lock file.</summary>
+    [Range(1, 240)]
+    public int RestoreTotalTimeoutMinutes { get; set; } = 20;
+
     /// <summary>Overall limit of <c>git clone</c> (not the short <c>Git:TimeoutSeconds</c>).</summary>
     [Range(1, 120)]
     public int CloneTimeoutMinutes { get; set; } = 10;
